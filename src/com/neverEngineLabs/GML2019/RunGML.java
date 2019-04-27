@@ -15,13 +15,36 @@ Generative Movement Language is a context-free grammar text generator.
  */
 package com.neverEngineLabs.GML2019;
 
+
+import com.google.gson.internal.bind.JsonTreeReader;
+import com.sonoport.freesound.FreesoundClient;
+import com.sonoport.freesound.FreesoundClientException;
+import com.sonoport.freesound.query.JSONResponseQuery;
+import com.sonoport.freesound.query.search.SortOrder;
+import com.sonoport.freesound.query.search.TextSearch;
+import com.sonoport.freesound.query.sound.SoundInstanceQuery;
+import com.sonoport.freesound.response.Response;
+
+import com.sonoport.freesound.response.Sound;
+
+import com.google.gson.*;
+
 import processing.core.PApplet;
 import processing.core.PFont;
+import processing.core.PGraphics;
+import processing.data.JSONArray;
+import processing.data.JSONObject;
 import processing.data.StringList;
+
+
 import rita.RiTa;
 
-import java.util.HashMap;
-import java.util.Map;
+
+import javafx.scene.media.AudioClip;
+
+import java.util.*;
+
+
 
 
 public class RunGML extends PApplet {
@@ -42,10 +65,21 @@ public class RunGML extends PApplet {
     private final int  H1=24, P=20, TINY=12, TOKEN=32;
     private Map<Integer,PFont> fonts = new HashMap<>();
 
-
+	private PGraphics offscreenBuffer;
 	private boolean displayingInfo = false;
 	private boolean displayingReduced = false;
 
+	/**
+	 * FreeSound.org
+	 */
+
+	FreesoundClient freesoundClient;
+
+	private String clientId = "7RllqFNPuvjj7U34vMu5";
+	private String clientSecret = "QPGtFa2wB0bMIHxffUhvYJMlQU0XxhZYtT9so0jE";
+
+	// Audio
+	AudioClip freeSound;
 
 	////////////////////////
 
@@ -54,11 +88,9 @@ public class RunGML extends PApplet {
 
 		size(1000, displayHeight );
 		pixelDensity(displayDensity());
-
 	}
 
 	public void setup() {
-
 
 		fonts.put(TINY, createFont("data/fonts/Lato-Italic.ttf", TINY, false));
 		fonts.put(H1, createFont("data/fonts/Lato-Bold.ttf", H1, true));
@@ -70,6 +102,13 @@ public class RunGML extends PApplet {
 		textAlign(CENTER, CENTER);
 		setTitleBar(latestTitle + grammar.getLatestTimeStamp());
 		displayGeneratedTextLayout(latestTitle, lines, 28);
+
+		offscreenBuffer = createGraphics(1000, displayHeight ); //todo: page turn implementation
+
+		freesoundClient = new FreesoundClient(clientId, clientSecret);
+		freeSoundTextSearch("cars");
+
+
 	}
 
 	public void draw() {
@@ -83,6 +122,68 @@ public class RunGML extends PApplet {
 		*/
 
 	}
+
+
+	public void freeSoundTextSearch(String token) {
+
+		Set<String> fields = new HashSet<>(Arrays.asList("id", "url", "previews", "tags"));
+
+		final TextSearch textSearch = new TextSearch().searchString(token).sortOrder(SortOrder.SCORE).includeFields(fields);
+
+		Response response = null;
+		try {
+			response = freesoundClient.executeQuery(textSearch);
+		} catch (FreesoundClientException e) {
+			e.printStackTrace();
+		}
+
+		int httpStatusCode = response.getResponseStatus();
+
+		int lookup = 2;
+
+
+		JsonElement results = new Gson().toJsonTree(response.getResults());
+		//this gets a String out
+		//String results = new Gson().toJson(response.getResults());
+
+		println("Http status code = " + httpStatusCode);
+		println("results:" + results);
+
+		JsonElement url = results.getAsJsonArray().get(lookup).getAsJsonObject().get("url");
+		println("item url:" + url.toString());
+
+		JsonElement previews = results.getAsJsonArray().get(lookup).getAsJsonObject().get("previews");
+		JsonElement mp3Hq = previews.getAsJsonObject().get("preview-hq-mp3");
+
+		AudioClip soundClip = new AudioClip(mp3Hq.toString());
+		soundClip.play(1);
+
+		/**
+		 * this lot of code will retrieve a SoundResponse from a integer unique ID
+		 * work in progress
+		 * https://freesound.org/docs/api/resources_apiv2.html#sound-instance
+		 *
+		 *
+		JsonElement soundIdentifier = results.getAsJsonArray().get(lookup).getAsJsonObject().get("id");
+		SoundInstanceQuery soundInstanceQuery = new SoundInstanceQuery(soundIdentifier.getAsInt());
+
+		Response<Sound> soundResponse = null;
+		try {
+			soundResponse = freesoundClient.executeQuery(soundInstanceQuery);
+		} catch (FreesoundClientException e) {
+			e.printStackTrace();
+		}
+
+		JsonElement soundResults = new Gson().toJsonTree(soundResponse.getResults());
+		**/
+
+		/*
+		AudioClip soundClip = new AudioClip(soundResponse.toString());
+		soundClip.play(1);
+		*/
+	}
+
+
 
 
 	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight) {
@@ -248,6 +349,11 @@ public class RunGML extends PApplet {
 			saveFrame(fn + ".png"); // save screen shot
 			saveStrings(fnReduced+".txt", grammar.arrangeTokensIntoLines(grammar.currentExpansionReduced, 4));
 
+			displayingReduced = true;
+			displayReduced();
+			saveFrame(fnReduced + ".png"); // save reduced words screen shot
+			displayingReduced = false;
+
 		} catch (Exception e) {
 			background(255,0,0);
 			return false;
@@ -272,7 +378,10 @@ public class RunGML extends PApplet {
 					TOKEN
 			);
 		} else {
-			displayGeneratedTextLayout(latestTitle, lines, TOKEN+4);}
+			displayGeneratedTextLayout(latestTitle, lines, TOKEN+4);
+		}
+
+
 	}
 
 

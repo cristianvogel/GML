@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="core3">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/libs/core3.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="https://processing.github.io/processing-javadocs/core/" />
+    </JAVADOC>
+    <SOURCES />
+  </library>
+</component>

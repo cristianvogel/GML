@@ -1,0 +1,16 @@
+<component name="ArtifactManager">
+  <artifact name="GML_GenerativeRituals">
+    <output-path>$PROJECT_DIR$/Build</output-path>
+    <root id="root">
+      <element id="archive" name="GML_GenerativeRituals.jar">
+        <element id="module-output" name="GML" />
+      </element>
+      <element id="directory" name="data">
+        <element id="dir-copy" path="$PROJECT_DIR$/data" />
+      </element>
+      <element id="directory" name="libs">
+        <element id="dir-copy" path="$PROJECT_DIR$/libs" />
+      </element>
+    </root>
+  </artifact>
+</component>
