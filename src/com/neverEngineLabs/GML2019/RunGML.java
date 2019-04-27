@@ -22,7 +22,6 @@ import rita.RiTa;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Arrays;
 
 
 public class RunGML extends PApplet {
@@ -40,7 +39,7 @@ public class RunGML extends PApplet {
    // public OscP5 oscP5 = new OscP5(this, 8000); // listener
 
 	//font sizes
-    private final int  H1=25, P=20, TINY=12;
+    private final int  H1=24, P=20, TINY=12, TOKEN=32;
     private Map<Integer,PFont> fonts = new HashMap<>();
 
 
@@ -53,7 +52,7 @@ public class RunGML extends PApplet {
 
 	public void settings() {
 
-		size(1000, 900 );
+		size(1000, displayHeight );
 		pixelDensity(displayDensity());
 
 	}
@@ -61,15 +60,16 @@ public class RunGML extends PApplet {
 	public void setup() {
 
 
-		fonts.put(TINY, createFont("fonts/AvenirNext-MediumItalic.ttf", TINY, false));
-		fonts.put(H1, createFont("fonts/LucidaGrande-Bold.ttf", H1, true));
-		fonts.put(P, createFont("fonts/AvenirNext-Medium.ttf", P, true));
+		fonts.put(TINY, createFont("data/fonts/Lato-Italic.ttf", TINY, false));
+		fonts.put(H1, createFont("data/fonts/Lato-Bold.ttf", H1, true));
+		fonts.put(P, createFont("data/fonts/Lato-Regular.ttf", P, true));
+		fonts.put(TOKEN, createFont("data/fonts/RobotoSlab-Regular.ttf", TOKEN, true));
 
 	    grammar.loadFrom(currentGrammarFile); // todo:  user or random selection of new grammars from disk
 		setFont(P);
 		textAlign(CENTER, CENTER);
 		setTitleBar(latestTitle + grammar.getLatestTimeStamp());
-		displayText(latestTitle, lines, 28);
+		displayGeneratedTextLayout(latestTitle, lines, 28);
 	}
 
 	public void draw() {
@@ -79,13 +79,13 @@ public class RunGML extends PApplet {
 		 so graphics are done inside grammar expansion event driven method
 		 like this
 
-		displayText(latestTitle, lines, 28);
+		displayGeneratedTextLayout(latestTitle, lines, 28);
 		*/
 
 	}
 
 
-	private void displayText(String title, String[] body, int lineHeight) {
+	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight) {
 
 		drawDecorativeBackground( 15, body.length + generationCounter);
 
@@ -96,6 +96,24 @@ public class RunGML extends PApplet {
 		text((savedFlag ? ("saved " + latestTimeStamp) : latestTimeStamp), width / 2, lineHeight*2);
 
 		setFont(P);
+		for (int j = 0; j < body.length; j++) {
+			text(body[j], width/2, (height/5) + j * lineHeight);
+		}
+
+
+	}
+
+	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight, int FONT) {
+
+		drawDecorativeBackground( 15, body.length + generationCounter);
+
+		setFont(H1);
+		text(title, width/2, H1+2);
+
+		setFont(TINY);
+		text((savedFlag ? ("saved " + latestTimeStamp) : latestTimeStamp), width / 2, lineHeight*2);
+
+		setFont(FONT);
 		for (int j = 0; j < body.length; j++) {
 			text(body[j], width/2, (height/5) + j * lineHeight);
 		}
@@ -143,7 +161,7 @@ public class RunGML extends PApplet {
 	}
 
 
-	displayText(latestTitle, lines, 28);
+	displayGeneratedTextLayout(latestTitle, lines, 28);
 }
 
 
@@ -170,7 +188,7 @@ public class RunGML extends PApplet {
 
 				setTitleBar("Saved successfully "+grammar.timeStampWithDate());
 				savedFlag = true;
-				displayText(latestTitle, lines, 28);
+				displayGeneratedTextLayout(latestTitle, lines, 28);
 
 			}
 			else { setTitleBar("ERROR: NOT SAVED"); savedFlag = false;  }
@@ -186,24 +204,18 @@ public class RunGML extends PApplet {
 
 			if (!displayingInfo) {
 
-				displayText(latestTitle, lines, 28);
+				displayGeneratedTextLayout(latestTitle, lines, 28);
 			}
 			else {
 
-				displayText("Grammar File Info", linesAlt, 22);
+				displayGeneratedTextLayout("Grammar File Info", linesAlt, 22);
 			}
 		}
 
 		if (key=='r' || key == 'R') {
 			displayingReduced = !displayingReduced;
 
-			if (displayingReduced) {
-				displayText(
-						latestTitle + " (Reduced)",
-						grammar.arrangeTokensIntoLines(grammar.currentExpansionReduced, 6),
-						24
-				);
-			} else displayText(latestTitle, lines, 28);
+			displayReduced();
 		}
 	}
 
@@ -248,6 +260,22 @@ public class RunGML extends PApplet {
 	public void setTitleBar(String s) {
 	    surface.setTitle(s);
 	}
+
+	public void displayReduced() {
+		if (displayingReduced) {
+
+
+			displayGeneratedTextLayout(
+					latestTitle + " (Reduced)",
+					grammar.arrangeTokensIntoLines(grammar.currentExpansionReduced, 6),
+					TOKEN+4,
+					TOKEN
+			);
+		} else {
+			displayGeneratedTextLayout(latestTitle, lines, TOKEN+4);}
+	}
+
+
 
 
 /// Java main
