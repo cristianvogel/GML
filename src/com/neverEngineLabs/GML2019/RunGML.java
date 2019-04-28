@@ -20,6 +20,7 @@ import com.google.gson.internal.bind.JsonTreeReader;
 import com.sonoport.freesound.FreesoundClient;
 import com.sonoport.freesound.FreesoundClientException;
 import com.sonoport.freesound.query.JSONResponseQuery;
+import com.sonoport.freesound.query.search.SearchFilter;
 import com.sonoport.freesound.query.search.SortOrder;
 import com.sonoport.freesound.query.search.TextSearch;
 import com.sonoport.freesound.query.sound.SoundInstanceQuery;
@@ -42,6 +43,8 @@ import rita.RiTa;
 
 import javafx.scene.media.AudioClip;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.*;
 
 
@@ -106,10 +109,12 @@ public class RunGML extends PApplet {
 		offscreenBuffer = createGraphics(1000, displayHeight ); //todo: page turn implementation
 
 		freesoundClient = new FreesoundClient(clientId, clientSecret);
-		freeSoundTextSearch("cars");
 
-
+		freeSoundTextSearch("language");
 	}
+
+
+
 
 	public void draw() {
 		/*
@@ -127,8 +132,9 @@ public class RunGML extends PApplet {
 	public void freeSoundTextSearch(String token) {
 
 		Set<String> fields = new HashSet<>(Arrays.asList("id", "url", "previews", "tags"));
+		SearchFilter _filter = new SearchFilter("ac_loudness", "[-23 TO -16]" );
 
-		final TextSearch textSearch = new TextSearch().searchString(token).sortOrder(SortOrder.SCORE).includeFields(fields);
+		final TextSearch textSearch = new TextSearch().searchString(token).sortOrder(SortOrder.DURATION_ASCENDING).filter(_filter).includeFields(fields);
 
 		Response response = null;
 		try {
@@ -139,14 +145,18 @@ public class RunGML extends PApplet {
 
 		int httpStatusCode = response.getResponseStatus();
 
-		int lookup = 2;
+		if (httpStatusCode != 200) {
+			println("Http status code = " + httpStatusCode +": fail");
+			return;
+		}
 
 
 		JsonElement results = new Gson().toJsonTree(response.getResults());
-		//this gets a String out
+		//this would get a String out
 		//String results = new Gson().toJson(response.getResults());
 
-		println("Http status code = " + httpStatusCode);
+		int lookup = RiTa.random(0,results.getAsJsonArray().size());
+
 		println("results:" + results);
 
 		JsonElement url = results.getAsJsonArray().get(lookup).getAsJsonObject().get("url");
@@ -155,7 +165,10 @@ public class RunGML extends PApplet {
 		JsonElement previews = results.getAsJsonArray().get(lookup).getAsJsonObject().get("previews");
 		JsonElement mp3Hq = previews.getAsJsonObject().get("preview-hq-mp3");
 
-		AudioClip soundClip = new AudioClip(mp3Hq.toString());
+		String _url = removeFirstAndLast(mp3Hq.toString()); //the GSON generated JSON primitives seem to come in with magic-quotes
+
+		//todo: some kind of background loading thread
+		AudioClip soundClip = new AudioClip(_url);
 		soundClip.play(1);
 
 		/**
@@ -164,26 +177,28 @@ public class RunGML extends PApplet {
 		 * https://freesound.org/docs/api/resources_apiv2.html#sound-instance
 		 *
 		 *
-		JsonElement soundIdentifier = results.getAsJsonArray().get(lookup).getAsJsonObject().get("id");
-		SoundInstanceQuery soundInstanceQuery = new SoundInstanceQuery(soundIdentifier.getAsInt());
+		 JsonElement soundIdentifier = results.getAsJsonArray().get(lookup).getAsJsonObject().get("id");
+		 SoundInstanceQuery soundInstanceQuery = new SoundInstanceQuery(soundIdentifier.getAsInt());
 
-		Response<Sound> soundResponse = null;
-		try {
-			soundResponse = freesoundClient.executeQuery(soundInstanceQuery);
-		} catch (FreesoundClientException e) {
-			e.printStackTrace();
-		}
+		 Response<Sound> soundResponse = null;
+		 try {
+		 soundResponse = freesoundClient.executeQuery(soundInstanceQuery);
+		 } catch (FreesoundClientException e) {
+		 e.printStackTrace();
+		 }
 
-		JsonElement soundResults = new Gson().toJsonTree(soundResponse.getResults());
-		**/
+		 JsonElement soundResults = new Gson().toJsonTree(soundResponse.getResults());
+		 **/
 
-		/*
-		AudioClip soundClip = new AudioClip(soundResponse.toString());
-		soundClip.play(1);
-		*/
 	}
 
-
+String removeFirstAndLast(String s) {
+		String s1 = "";
+if (s.length() >2) {
+	 s1 = s.substring(1, s.length() - 1);
+}
+	return s1;
+}
 
 
 	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight) {

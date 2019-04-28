@@ -336,6 +336,12 @@ public class RiTa implements Constants {
     return RiTa.tokenize(s).length;
   }
 
+  /**
+   * Shuffles an array of items
+   * @param items
+   */
+
+
   public static void shuffle(Object[] items) {
     List tmp = new LinkedList();
     for (int i = 0; i < items.length; i++)
