@@ -40,7 +40,7 @@ import java.util.*;
 public class RunGML extends PApplet {
 	//constructor with field assignments
 	private GrammarGML grammar = new GrammarGML(this);
-	private String[] lines = { "Press spacebar to Generate...\nPress 's' to save...\nPress 'i' for info...\nPress 'r' to reduce..." };
+	private String[] lines = { "Press spacebar to Generate...\nPress 's' to save...\nPress 'r' to reduce...\nPress 'p' to play a sonification (internet connection required)" };
 	private String[] linesAlt ;
 	private String currentGrammarFile = "grammarFiles/FlowerSpiral.json";
 	private String latestTitle = "Welcome to Generative Movement Language!";
@@ -98,8 +98,8 @@ public class RunGML extends PApplet {
 
 		freesoundClient = new FreesoundClient(clientId, clientSecret);
 
-		freeSoundTextSearchThenPlay("hello",0.1f);
-		freeSoundTextSearchThenPlay("welcome",1.5f);
+		freeSoundTextSearchThenPlay("hello");
+		freeSoundTextSearchThenPlay("welcome");
 	}
 
 
@@ -118,13 +118,13 @@ public class RunGML extends PApplet {
 	}
 
 
-	public void freeSoundTextSearchThenPlay(String token, float startWait) {
+	public void freeSoundTextSearchThenPlay(String token, float offset, boolean offsetByDuration) {
 
-		Set<String> fields = new HashSet<>(Arrays.asList("id", "url", "previews", "tags"));
-		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-23 TO -16]" );
-		SearchFilter _filter2 = new SearchFilter("duration", "[0.5 TO 2]" );
+		Set<String> fields = new HashSet<>(Arrays.asList("id", "url", "previews", "tags", "duration"));
+		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-26 TO -16]" );
+		SearchFilter _filter2 = new SearchFilter("duration", "[0.5 TO 6]" );
 
-
+		println("Searching for "+token);
 		final TextSearch textSearch = new TextSearch().searchString(token).sortOrder(SortOrder.DURATION_DESCENDING).filter(_filter1).filter( _filter2).includeFields(fields);
 
 		Response response = null;
@@ -146,9 +146,14 @@ public class RunGML extends PApplet {
 		//this would get a String out
 		//String results = new Gson().toJson(response.getResults());
 
-		int lookup = RiTa.random(0,results.getAsJsonArray().size());
+		int _bounds = results.getAsJsonArray().size();
+		if (_bounds == 0) {println("Empty result, skipping.."); return; }
 
-		println ("Playing result " + lookup + " out of "+ results.getAsJsonArray().size());
+		int lookup = RiTa.random(0,results.getAsJsonArray().size());
+		JsonElement duration = results.getAsJsonArray().get(lookup).getAsJsonObject().get("duration");
+
+
+		println ("Playing result " + lookup + " out of "+ results.getAsJsonArray().size() + " results for "+token+" with duration:"+ duration.toString());
 		JsonElement url = results.getAsJsonArray().get(lookup).getAsJsonObject().get("url");
 		println("item url:" + url.toString());
 
@@ -157,8 +162,13 @@ public class RunGML extends PApplet {
 
 		String _url = removeFirstAndLast(mp3Hq.toString()); //the GSON generated JSON primitives seem to come in with magic-quotes
 
+		if (offsetByDuration) {
+			offset = duration.getAsFloat();
+			println("Float duration:" +offset);
+		}
+
 		// background audio loading thread
-		AudioStreamer _audioStreamer = new AudioStreamer(_url, startWait);
+		AudioStreamer _audioStreamer = new AudioStreamer(_url, offset);
         _audioStreamer.start();
 
 		/**
@@ -179,6 +189,10 @@ public class RunGML extends PApplet {
 
 		 JsonElement soundResults = new Gson().toJsonTree(soundResponse.getResults());
 		 **/
+	}
+
+	private void freeSoundTextSearchThenPlay(String token) {
+		freeSoundTextSearchThenPlay(token, 0, false);
 	}
 
     String removeFirstAndLast(String s) {
@@ -221,6 +235,20 @@ public class RunGML extends PApplet {
 		setFont(FONT);
 		for (int j = 0; j < body.length; j++) {
 			text(body[j], width/2, (height/5) + j * lineHeight);
+		}
+
+
+	}
+
+	private void sonifyGeneratedText () {
+
+		String [] wordsToSonify = grammar.currentExpansionReduced;
+		if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
+
+		for (int i = 0; i < wordsToSonify.length; i++) {
+
+
+			freeSoundTextSearchThenPlay( wordsToSonify[i] , i , true );
 		}
 
 
@@ -321,6 +349,10 @@ public class RunGML extends PApplet {
 			displayingReduced = !displayingReduced;
 
 			displayReduced();
+		}
+
+		if (key=='p' || key=='P') {
+			sonifyGeneratedText();
 		}
 	}
 

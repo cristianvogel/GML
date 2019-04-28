@@ -16,7 +16,7 @@ public class AudioStreamer extends Thread {
         private int _cycles;
 
         //Timed Event
-          private RiTimer _timer;
+
           private boolean _timerComplete = false;
           private float _startTime;
 
@@ -27,11 +27,15 @@ public class AudioStreamer extends Thread {
             _cycles = -1;
             _startTime = startTime;
             soundClip = new AudioClip(_url);
-            _timer = new RiTimer(this, _startTime, "timerDone");
+
+            if(startTime != 0) {
+             RiTimer  _timer = new RiTimer(this, _startTime, "timerDone");
+            } else _timerComplete = true;
         }
 
         public void run()
         {
+
            if (_timerComplete) {
                 println("Timer complete");
                 soundClip.play(_volume);
@@ -44,7 +48,7 @@ public class AudioStreamer extends Thread {
     private void timerDone () {
 
             _timerComplete = true;
-            _timer.stop ();
+
         }
 
 
