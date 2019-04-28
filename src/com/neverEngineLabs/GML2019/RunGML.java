@@ -246,11 +246,10 @@ public class RunGML extends PApplet {
 		if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
 
 		for (int i = 0; i < wordsToSonify.length; i++) {
-
-
 			freeSoundTextSearchThenPlay( wordsToSonify[i] , i , true );
 		}
 
+		setTitleBar("Sonifying generated text with sounds from FreeSound.org");
 
 	}
 
