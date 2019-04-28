@@ -40,7 +40,7 @@ import java.util.*;
 public class RunGML extends PApplet {
 	//constructor with field assignments
 	private GrammarGML grammar = new GrammarGML(this);
-	private String[] lines = { "Press spacebar to Generate...\nPress 's' to save...\nPress 'r' to reduce...\nPress 'p' to play a sonification (internet connection required)" };
+	private String[] lines = { "First press the spacebar to Generate a new text...\nthen 'r' to see it reduced...\npress 's' to save the output to disk...\n\nand 'p' to turn the text into sound (needs internet to work!)" };
 	private String[] linesAlt ;
 	private String currentGrammarFile = "grammarFiles/FlowerSpiral.json";
 	private String latestTitle = "Welcome to Generative Movement Language!";
