@@ -1,49 +1,71 @@
+/**
+ * Class to handle threaded audio playback
+ * basic timer implementation offsets start time
+ */
+
 package com.neverEngineLabs.GML2019;
 
 import javafx.scene.media.AudioClip;
 import rita.support.RiTimer;
 
+import java.util.concurrent.ThreadLocalRandom;
+
+import static processing.core.PApplet.map;
 import static processing.core.PApplet.println;
+import static rita.RiTa.random;
+
 
 public class AudioStreamer extends Thread {
 
 
+    private int _priority;
     private String _url;
         private double _volume;
         private AudioClip soundClip;
-        private boolean _looping;
-        private int _cycles;
+
 
         //Timed Event
 
           private boolean _offsetTimerComplete = false;
           private float _startTime;
-          private RiTimer _offsetTimer;
+          private  RiTimer _offsetTimer;
+          private ThreadLocalRandom _random;
 
-    AudioStreamer (String url, float startTime) {
+    AudioStreamer (String url, float wait) {
+
+            this.setName(url);
             _url = url;
             _volume = 0.75;
-            _looping = false;
-            _cycles = -1;
-            _startTime = startTime;
+            _startTime = wait;
             soundClip = new AudioClip(_url);
+            _priority = 1;
 
-            if(startTime != 0) {
+            if(wait != 0) {
                 _offsetTimer = new RiTimer(this, _startTime, "timerDone");
             } else _offsetTimerComplete = true;
         }
+
+    AudioStreamer (String url, float wait, int priority) {
+        this.setName(url);
+        _url = url;
+        _volume = 0.75;
+        _startTime = wait;
+        soundClip = new AudioClip(_url);
+        _priority = priority;
+
+        if(wait != 0) {
+            _offsetTimer = new RiTimer(this, _startTime, "timerDone");
+        } else _offsetTimerComplete = true;
+    }
 
         public void run()
         {
 
            if (_offsetTimerComplete && !soundClip.isPlaying()) {
-                println("Timer complete, starting playback");
-                soundClip.play(_volume);
+                println("Wait complete, starting playback from "+_url);
+                soundClip.play(_volume, 0 , 1, map(_priority,0,15,-1,1), _priority );
             }
-
-
         }
-
 
 
     /**

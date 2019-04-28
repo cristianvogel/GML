@@ -30,20 +30,20 @@ import processing.core.PFont;
 import processing.core.PGraphics;
 import processing.data.StringList;
 import rita.RiTa;
-import rita.support.RiTimer;
-
 import java.util.*;
-
-
 
 
 public class RunGML extends PApplet {
 	//constructor with field assignments
 	private GrammarGML grammar = new GrammarGML(this);
-	private String[] lines = { "First press the spacebar to Generate a new text...\nthen 'r' to see it reduced...\npress 's' to save the output to disk...\n\nand 'p' to turn the text into sound (needs internet to work!)" };
+	private String[] lines = {
+	        "\n\nFirst press the Spacebar to generate a new text...\n\n" +
+            "then press 'R' to see the reduced text...\n\n" +
+            "or press 'S' to save the text to disk...\n\n" +
+            "or press 'P' to play the text as sound" };
 	private String[] linesAlt ;
-	private String currentGrammarFile = "grammarFiles/FlowerSpiral.json";
-	private String latestTitle = "Welcome to Generative Movement Language!";
+	private String currentGrammarFile = "data/grammarFiles/haikuGrammar.json";
+	private String latestTitle = "Welcome to Sonified Haiku Generator!";
 	private String latestTimeStamp = "Current grammar: "+currentGrammarFile;
 	private Boolean savedFlag = false;
 	private int generationCounter = 0;
@@ -51,7 +51,7 @@ public class RunGML extends PApplet {
 
 
 	//font sizes
-    private final int  H1=24, P=20, TINY=12, TOKEN=32;
+    private final int  H1=36, P=20, TINY=12, TOKEN=32;
     private Map<Integer,PFont> fonts = new HashMap<>();
 
 	private PGraphics offscreenBuffer;
@@ -77,7 +77,7 @@ public class RunGML extends PApplet {
 
 	public void settings() {
 
-		size(1000, displayHeight );
+		size(1000, (int) (displayHeight * 0.75) );
 		pixelDensity(displayDensity());
 	}
 
@@ -98,34 +98,43 @@ public class RunGML extends PApplet {
 
 		freesoundClient = new FreesoundClient(clientId, clientSecret);
 
-		freeSoundTextSearchThenPlay("hello");
-		freeSoundTextSearchThenPlay("welcome");
+		freeSoundTextSearchThenPlay("hello", 3);
+		freeSoundTextSearchThenPlay("welcome", 3);
 	}
 
 
-
-
+    /**
+     * Processing3 update method called every frame
+     */
 	public void draw() {
-		/*
-		usually called every frame by Processing
-		but we only need to draw the text Score from an interaction
-		 so graphics are done inside grammar expansion event driven method
-		 like this
 
-		displayGeneratedTextLayout(latestTitle, lines, 28);
-		*/
+
 
 	}
 
+    /**
+     * text search of Freesound.org through the API which then sets up the playlist and player start
+     * plus a bunch of overloads
+     *  @param token the word to search for
+     * @param offset a delay to the start of audio playback in s
+     * @param offsetByDuration set to true to offset by the same duration as the file
+     * @param priority polyphony of 15 there can be a priority to voice offloading
+     */
 
-	public void freeSoundTextSearchThenPlay(String token, float offset, boolean offsetByDuration) {
+	public void freeSoundTextSearchThenPlay(String token, float offset, boolean offsetByDuration, float maxDuration, int priority) {
+
 
 		Set<String> fields = new HashSet<>(Arrays.asList("id", "url", "previews", "tags", "duration"));
 		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-26 TO -16]" );
-		SearchFilter _filter2 = new SearchFilter("duration", "[0.5 TO 6]" );
+		SearchFilter _filter2 = new SearchFilter("duration", "[0.5 TO "+maxDuration+"]" );
 
 		println("Searching for "+token);
-		final TextSearch textSearch = new TextSearch().searchString(token).sortOrder(SortOrder.DURATION_DESCENDING).filter(_filter1).filter( _filter2).includeFields(fields);
+		final TextSearch textSearch =
+                new TextSearch()
+                        .searchString(token)
+                        .sortOrder(SortOrder.DURATION_DESCENDING)
+                        .filter(_filter1).filter( _filter2).includeFields(fields)
+                        .pageSize(50);
 
 		Response response = null;
 		try {
@@ -141,7 +150,6 @@ public class RunGML extends PApplet {
 			return;
 		}
 
-
 		JsonElement results = new Gson().toJsonTree(response.getResults());
 		//this would get a String out
 		//String results = new Gson().toJson(response.getResults());
@@ -152,10 +160,8 @@ public class RunGML extends PApplet {
 		int lookup = RiTa.random(0,results.getAsJsonArray().size());
 		JsonElement duration = results.getAsJsonArray().get(lookup).getAsJsonObject().get("duration");
 
-
-		println ("Playing result " + lookup + " out of "+ results.getAsJsonArray().size() + " results for "+token+" with duration:"+ duration.toString());
 		JsonElement url = results.getAsJsonArray().get(lookup).getAsJsonObject().get("url");
-		println("item url:" + url.toString());
+		//println("item url:" + url.toString());
 
 		JsonElement previews = results.getAsJsonArray().get(lookup).getAsJsonObject().get("previews");
 		JsonElement mp3Hq = previews.getAsJsonObject().get("preview-hq-mp3");
@@ -164,36 +170,46 @@ public class RunGML extends PApplet {
 
 		if (offsetByDuration) {
 			offset = duration.getAsFloat();
-			println("Float duration:" +offset);
+
 		}
 
+        println ("Playing result " + lookup + " out of "+ results.getAsJsonArray().size() + " results for "+token+" with duration: "+ duration.toString() + " start offset:" + offset) ;
+
 		// background audio loading thread
-		AudioStreamer _audioStreamer = new AudioStreamer(_url, offset);
+		AudioStreamer _audioStreamer = new AudioStreamer(_url, offset, priority);
         _audioStreamer.start();
-
-		/**
-		 * the following code will retrieve a SoundResponse from a integer unique ID
-		 * work in progress for future feature extraction purposes
-		 * https://freesound.org/docs/api/resources_apiv2.html#sound-instance
-		 *
-		 *
-		 JsonElement soundIdentifier = results.getAsJsonArray().get(lookup).getAsJsonObject().get("id");
-		 SoundInstanceQuery soundInstanceQuery = new SoundInstanceQuery(soundIdentifier.getAsInt());
-
-		 Response<Sound> soundResponse = null;
-		 try {
-		 soundResponse = freesoundClient.executeQuery(soundInstanceQuery);
-		 } catch (FreesoundClientException e) {
-		 e.printStackTrace();
-		 }
-
-		 JsonElement soundResults = new Gson().toJsonTree(soundResponse.getResults());
-		 **/
 	}
 
-	private void freeSoundTextSearchThenPlay(String token) {
-		freeSoundTextSearchThenPlay(token, 0, false);
+	private void freeSoundTextSearchThenPlay(String token, float maxDuration) {
+		freeSoundTextSearchThenPlay(token, 0, false, maxDuration, 1);
 	}
+
+    private void freeSoundTextSearchThenPlay(String token, Boolean offsetByDuration, float maxDuration, int voicePriority) {
+        freeSoundTextSearchThenPlay(token, 0, offsetByDuration, maxDuration, voicePriority);
+    }
+
+    private void freeSoundTextSearchThenPlay(String token, float offset, float maxDuration, int voicePriority) {
+        freeSoundTextSearchThenPlay(token, offset, false, maxDuration, voicePriority);
+    }
+
+    /**
+     * the following code will retrieve a SoundResponse from a integer unique ID
+     * work in progress for future feature extraction purposes
+     * https://freesound.org/docs/api/resources_apiv2.html#sound-instance
+     *
+     *
+     JsonElement soundIdentifier = results.getAsJsonArray().get(lookup).getAsJsonObject().get("id");
+     SoundInstanceQuery soundInstanceQuery = new SoundInstanceQuery(soundIdentifier.getAsInt());
+
+     Response<Sound> soundResponse = null;
+     try {
+     soundResponse = freesoundClient.executeQuery(soundInstanceQuery);
+     } catch (FreesoundClientException e) {
+     e.printStackTrace();
+     }
+
+     JsonElement soundResults = new Gson().toJsonTree(soundResponse.getResults());
+     **/
 
     String removeFirstAndLast(String s) {
         String s1 = "";
@@ -218,9 +234,25 @@ public class RunGML extends PApplet {
 		for (int j = 0; j < body.length; j++) {
 			text(body[j], width/2, (height/5) + j * lineHeight);
 		}
-
-
 	}
+
+    private void sonifyGeneratedText () {
+
+        String [] wordsToSonify = grammar.currentExpansionReduced;
+         if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
+
+        for (int i = 0; i < wordsToSonify.length; i++) {
+            //15 voices max?
+            if (i>0) {
+                freeSoundTextSearchThenPlay(wordsToSonify[i], i*3, 15,i % 15);
+            } else {
+                freeSoundTextSearchThenPlay(wordsToSonify[i], 0.5f, 30, 1 );
+            }
+        }
+
+        setTitleBar("Sonifying generated text with sounds from FreeSound.org");
+
+    }
 
 	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight, int FONT) {
 
@@ -240,18 +272,7 @@ public class RunGML extends PApplet {
 
 	}
 
-	private void sonifyGeneratedText () {
 
-		String [] wordsToSonify = grammar.currentExpansionReduced;
-		if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
-
-		for (int i = 0; i < wordsToSonify.length; i++) {
-			freeSoundTextSearchThenPlay( wordsToSonify[i] , i , true );
-		}
-
-		setTitleBar("Sonifying generated text with sounds from FreeSound.org");
-
-	}
 
 	private void setFont(int tag) {
 		textFont(fonts.get(tag));
@@ -293,7 +314,7 @@ public class RunGML extends PApplet {
 	}
 
 
-	displayGeneratedTextLayout(latestTitle, lines, 28);
+	displayGeneratedTextLayout(latestTitle, lines, 34, TOKEN);
 }
 
 
