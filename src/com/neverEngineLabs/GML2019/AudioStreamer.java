@@ -1,7 +1,6 @@
 package com.neverEngineLabs.GML2019;
 
 import javafx.scene.media.AudioClip;
-import rita.RiTaEvent;
 import rita.support.RiTimer;
 
 import static processing.core.PApplet.println;
@@ -17,8 +16,9 @@ public class AudioStreamer extends Thread {
 
         //Timed Event
 
-          private boolean _timerComplete = false;
+          private boolean _offsetTimerComplete = false;
           private float _startTime;
+          private RiTimer _offsetTimer;
 
     AudioStreamer (String url, float startTime) {
             _url = url;
@@ -29,26 +29,30 @@ public class AudioStreamer extends Thread {
             soundClip = new AudioClip(_url);
 
             if(startTime != 0) {
-             RiTimer  _timer = new RiTimer(this, _startTime, "timerDone");
-            } else _timerComplete = true;
+                _offsetTimer = new RiTimer(this, _startTime, "timerDone");
+            } else _offsetTimerComplete = true;
         }
 
         public void run()
         {
 
-           if (_timerComplete) {
-                println("Timer complete");
+           if (_offsetTimerComplete && !soundClip.isPlaying()) {
+                println("Timer complete, starting playback");
                 soundClip.play(_volume);
             }
+
+
         }
+
+
 
     /**
      * Callback method for RiTimer
      */
     private void timerDone () {
 
-            _timerComplete = true;
-
+            _offsetTimerComplete = true;
+            _offsetTimer.stop();
         }
 
 
