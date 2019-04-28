@@ -16,35 +16,22 @@ Generative Movement Language is a context-free grammar text generator.
 package com.neverEngineLabs.GML2019;
 
 
-import com.google.gson.internal.bind.JsonTreeReader;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.sonoport.freesound.FreesoundClient;
 import com.sonoport.freesound.FreesoundClientException;
-import com.sonoport.freesound.query.JSONResponseQuery;
 import com.sonoport.freesound.query.search.SearchFilter;
 import com.sonoport.freesound.query.search.SortOrder;
 import com.sonoport.freesound.query.search.TextSearch;
-import com.sonoport.freesound.query.sound.SoundInstanceQuery;
 import com.sonoport.freesound.response.Response;
-
-import com.sonoport.freesound.response.Sound;
-
-import com.google.gson.*;
-
+import javafx.scene.media.AudioClip;
 import processing.core.PApplet;
 import processing.core.PFont;
 import processing.core.PGraphics;
-import processing.data.JSONArray;
-import processing.data.JSONObject;
 import processing.data.StringList;
-
-
 import rita.RiTa;
+import rita.support.RiTimer;
 
-
-import javafx.scene.media.AudioClip;
-
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.*;
 
 
@@ -61,8 +48,7 @@ public class RunGML extends PApplet {
 	private Boolean savedFlag = false;
 	private int generationCounter = 0;
 
-	// todo: OSC setup
-   // public OscP5 oscP5 = new OscP5(this, 8000); // listener
+
 
 	//font sizes
     private final int  H1=24, P=20, TINY=12, TOKEN=32;
@@ -77,12 +63,14 @@ public class RunGML extends PApplet {
 	 */
 
 	FreesoundClient freesoundClient;
-
 	private String clientId = "7RllqFNPuvjj7U34vMu5";
 	private String clientSecret = "QPGtFa2wB0bMIHxffUhvYJMlQU0XxhZYtT9so0jE";
 
 	// Audio
 	AudioClip freeSound;
+
+
+
 
 	////////////////////////
 
@@ -110,7 +98,8 @@ public class RunGML extends PApplet {
 
 		freesoundClient = new FreesoundClient(clientId, clientSecret);
 
-		freeSoundTextSearch("language");
+		freeSoundTextSearchThenPlay("hello",0.1f);
+		freeSoundTextSearchThenPlay("welcome",1.5f);
 	}
 
 
@@ -129,12 +118,14 @@ public class RunGML extends PApplet {
 	}
 
 
-	public void freeSoundTextSearch(String token) {
+	public void freeSoundTextSearchThenPlay(String token, float startWait) {
 
 		Set<String> fields = new HashSet<>(Arrays.asList("id", "url", "previews", "tags"));
-		SearchFilter _filter = new SearchFilter("ac_loudness", "[-23 TO -16]" );
+		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-23 TO -16]" );
+		SearchFilter _filter2 = new SearchFilter("duration", "[0.5 TO 2]" );
 
-		final TextSearch textSearch = new TextSearch().searchString(token).sortOrder(SortOrder.DURATION_ASCENDING).filter(_filter).includeFields(fields);
+
+		final TextSearch textSearch = new TextSearch().searchString(token).sortOrder(SortOrder.DURATION_DESCENDING).filter(_filter1).filter( _filter2).includeFields(fields);
 
 		Response response = null;
 		try {
@@ -157,8 +148,7 @@ public class RunGML extends PApplet {
 
 		int lookup = RiTa.random(0,results.getAsJsonArray().size());
 
-		println("results:" + results);
-
+		println ("Playing result " + lookup + " out of "+ results.getAsJsonArray().size());
 		JsonElement url = results.getAsJsonArray().get(lookup).getAsJsonObject().get("url");
 		println("item url:" + url.toString());
 
@@ -167,13 +157,13 @@ public class RunGML extends PApplet {
 
 		String _url = removeFirstAndLast(mp3Hq.toString()); //the GSON generated JSON primitives seem to come in with magic-quotes
 
-		//todo: some kind of background loading thread
-		AudioClip soundClip = new AudioClip(_url);
-		soundClip.play(1);
+		// background audio loading thread
+		AudioStreamer _audioStreamer = new AudioStreamer(_url, startWait);
+        _audioStreamer.start();
 
 		/**
-		 * this lot of code will retrieve a SoundResponse from a integer unique ID
-		 * work in progress
+		 * the following code will retrieve a SoundResponse from a integer unique ID
+		 * work in progress for future feature extraction purposes
 		 * https://freesound.org/docs/api/resources_apiv2.html#sound-instance
 		 *
 		 *
@@ -189,16 +179,15 @@ public class RunGML extends PApplet {
 
 		 JsonElement soundResults = new Gson().toJsonTree(soundResponse.getResults());
 		 **/
-
 	}
 
-String removeFirstAndLast(String s) {
-		String s1 = "";
-if (s.length() >2) {
-	 s1 = s.substring(1, s.length() - 1);
-}
-	return s1;
-}
+    String removeFirstAndLast(String s) {
+        String s1 = "";
+        if (s.length() >2) {
+            s1 = s.substring(1, s.length() - 1);
+        }
+        return s1;
+    }
 
 
 	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight) {
