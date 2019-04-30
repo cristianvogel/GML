@@ -26,7 +26,7 @@ public class AudioStreamer extends Thread {
 
         //Timed Event
 
-          private boolean _offsetTimerComplete = false;
+          private boolean _offsetTimerComplete;
           private float _startTime;
           private  RiTimer _offsetTimer;
           private ThreadLocalRandom _random;
@@ -34,6 +34,7 @@ public class AudioStreamer extends Thread {
     AudioStreamer (String url, float wait) {
 
             this.setName(url);
+            _offsetTimerComplete = false;
             _url = url;
             _volume = 0.75;
             _startTime = wait;
@@ -42,11 +43,13 @@ public class AudioStreamer extends Thread {
 
             if(wait != 0) {
                 _offsetTimer = new RiTimer(this, _startTime, "timerDone");
+                _offsetTimer.pauseFor(0.1f);
             } else _offsetTimerComplete = true;
         }
 
     AudioStreamer (String url, float wait, int priority) {
         this.setName(url);
+        _offsetTimerComplete = false;
         _url = url;
         _volume = 0.75;
         _startTime = wait;
@@ -55,6 +58,7 @@ public class AudioStreamer extends Thread {
 
         if(wait != 0) {
             _offsetTimer = new RiTimer(this, _startTime, "timerDone");
+            //println(_offsetTimer.id()+" instantiatied");
         } else _offsetTimerComplete = true;
     }
 

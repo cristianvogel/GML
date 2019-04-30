@@ -30,6 +30,8 @@ import processing.core.PFont;
 import processing.core.PGraphics;
 import processing.data.StringList;
 import rita.RiTa;
+
+
 import java.util.*;
 
 
@@ -77,7 +79,7 @@ public class RunGML extends PApplet {
 
 	public void settings() {
 
-		size(1000, (int) (displayHeight * 0.75) );
+		size(1000, (int) (displayHeight * 0.6) );
 		pixelDensity(displayDensity());
 	}
 
@@ -91,15 +93,28 @@ public class RunGML extends PApplet {
 	    grammar.loadFrom(currentGrammarFile); // todo:  user or random selection of new grammars from disk
 		setFont(P);
 		textAlign(CENTER, CENTER);
-		setTitleBar(latestTitle + grammar.getLatestTimeStamp());
+
 		displayGeneratedTextLayout(latestTitle, lines, 28);
 
-		offscreenBuffer = createGraphics(1000, displayHeight ); //todo: page turn implementation
+		//offscreenBuffer = createGraphics(1000, displayHeight ); //todo: page turn implementation
 
+		setTitleBar("Loading, please wait...");
 		freesoundClient = new FreesoundClient(clientId, clientSecret);
 
-		freeSoundTextSearchThenPlay("hello", 3);
-		freeSoundTextSearchThenPlay("welcome", 3);
+
+
+		try {
+			freeSoundTextSearchThenPlay("hello", 3);
+			freeSoundTextSearchThenPlay("welcome", 3);
+		} catch ( Exception e) {
+			setTitleBar( "> PLEASE CHECK YOUR INTERNET CONNECTION <");
+			fill(255,10,10);
+			text("PLEASE CHECK YOUR INTERNET CONNECTION", displayWidth/4, displayHeight / 2);
+			fill(250);
+		}
+
+		setTitleBar(latestTitle + grammar.getLatestTimeStamp());
+
 	}
 
 
@@ -145,10 +160,19 @@ public class RunGML extends PApplet {
 
 		int httpStatusCode = response.getResponseStatus();
 
-		if (httpStatusCode != 200) {
+		if (httpStatusCode == 429) {
 			println("Http status code = " + httpStatusCode +": fail");
+			setTitleBar("HTTP Error 429: too many requests - please try again tomorrow");
+
 			return;
 		}
+
+		if (httpStatusCode == 200) {
+			println("Http status code = " + httpStatusCode +": fail");
+			setTitleBar("HTTP Error" + httpStatusCode);
+			return;
+		}
+
 
 		JsonElement results = new Gson().toJsonTree(response.getResults());
 		//this would get a String out
@@ -232,7 +256,7 @@ public class RunGML extends PApplet {
 
 		setFont(P);
 		for (int j = 0; j < body.length; j++) {
-			text(body[j], width/2, (height/5) + j * lineHeight);
+			text(body[j], width/2, (height/4) + j * lineHeight);
 		}
 	}
 
@@ -240,6 +264,8 @@ public class RunGML extends PApplet {
 
         String [] wordsToSonify = grammar.currentExpansionReduced;
          if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
+
+		setTitleBar("Sonifying "+latestTitle+" using sounds from FreeSound.org");
 
         for (int i = 0; i < wordsToSonify.length; i++) {
             //15 voices max?
@@ -250,7 +276,7 @@ public class RunGML extends PApplet {
             }
         }
 
-        setTitleBar("Sonifying generated text with sounds from FreeSound.org");
+
 
     }
 
