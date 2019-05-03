@@ -32,6 +32,7 @@ import processing.data.StringList;
 import rita.RiTa;
 
 
+import java.lang.reflect.Array;
 import java.util.*;
 
 
@@ -141,9 +142,9 @@ public class RunGML extends PApplet {
 		final TextSearch textSearch =
                 new TextSearch()
                         .searchString(token)
-                        .sortOrder(SortOrder.DURATION_DESCENDING)
+                        .sortOrder(SortOrder.RATING_DESCENDING)
                         .filter(_filter1).filter( _filter2).includeFields(fields)
-                        .pageSize(50);
+                        .pageSize(RiTa.random(50,150));
 
 		Response response = null;
 		try {
@@ -156,8 +157,7 @@ public class RunGML extends PApplet {
 
 		if (httpStatusCode == 429) {
 			println("Http status code = " + httpStatusCode +": fail");
-			setTitleBar("HTTP Error 429: too many requests - please try again tomorrow");
-
+			setTitleBar("HTTP Error 429: too many requests - please try again later");
 			return;
 		}
 
@@ -175,23 +175,48 @@ public class RunGML extends PApplet {
 		int _bounds = results.getAsJsonArray().size();
 		if (_bounds == 0) {println("Empty result, skipping.."); return; }
 
-		int lookup = RiTa.random(0,results.getAsJsonArray().size());
-		JsonElement duration = results.getAsJsonArray().get(lookup).getAsJsonObject().get("duration");
+		/**
+		 * Search for Tag hits and try to pick from all tagged hits
+		 * If no Tag matches, then the result probably
+		 * has the Token somewhere else in the description
+		 * so pick randomly from the results
+		 */
 
-		JsonElement url = results.getAsJsonArray().get(lookup).getAsJsonObject().get("url");
-		//println("item url:" + url.toString());
+		ArrayList<Integer>  _taggedHits = new ArrayList<Integer>();
 
-		JsonElement previews = results.getAsJsonArray().get(lookup).getAsJsonObject().get("previews");
+		int selectedResult = 0;
+
+		for (int i = 0; i < _bounds; i++)
+		{
+			JsonElement tags = results.getAsJsonArray().get(i).getAsJsonObject().get("tags");
+			if (tags.toString().contains(token)) {
+				_taggedHits.add(i);
+			}
+		}
+
+
+		// tags are not always availabe so try to pick from a set of at least 2 hits
+		if (_taggedHits.size() > 2) {
+			selectedResult = _taggedHits.get(RiTa.random(0, _taggedHits.size() ));
+			println("Selecting from Tag hits:"+_taggedHits.toString());
+		} else {
+			selectedResult = RiTa.random(0,_bounds);
+			println("Not enough tags, selecting at random...");
+			}
+
+
+		JsonElement duration = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("duration");
+		JsonElement url = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("url");
+		JsonElement previews = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("previews");
 		JsonElement mp3Hq = previews.getAsJsonObject().get("preview-hq-mp3");
 
 		String _url = removeFirstAndLast(mp3Hq.toString()); //the GSON generated JSON primitives seem to come in with magic-quotes
 
 		if (offsetByDuration) {
 			offset = duration.getAsFloat();
-
 		}
 
-        println ("Playing result " + lookup + " out of "+ results.getAsJsonArray().size() + " results for "+token+" with duration: "+ duration.toString() + " start offset:" + offset) ;
+        println ("Playing result " + selectedResult + " out of "+ results.getAsJsonArray().size() + " results for "+token+" with duration: "+ duration.toString() + " start offset:" + offset) ;
 
 		// background audio loading thread
 		AudioStreamer _audioStreamer = new AudioStreamer(_url, offset, priority);
