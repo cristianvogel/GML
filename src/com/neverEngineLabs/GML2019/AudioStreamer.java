@@ -57,16 +57,16 @@ public class AudioStreamer extends Thread {
         if(wait != 0) {
             _offsetTimer = new RiTimerSynchronised(this, _startTime, "timerDone");
            // _offsetTimer.pauseFor(0.1f);
-            println(_offsetTimer.id()+" instantiatied");
+            println("Wait timer " + _offsetTimer.id()+" instantiatied");
         } else _offsetTimerComplete = true;
     }
 
         public void run()
         {
-
            if (_offsetTimerComplete && !soundClip.isPlaying()) {
                 println("Wait complete, starting playback from "+_url);
                 soundClip.play(_volume, 0 , 1, map(_priority,0,15,-1,1), _priority );
+
             }
         }
 

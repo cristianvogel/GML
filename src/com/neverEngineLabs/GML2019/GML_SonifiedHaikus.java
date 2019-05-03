@@ -1,16 +1,20 @@
 /*
-Generative Movement Language is a context-free grammar text generator.
+Generative Movement Language (GML) is a context-free grammar text generator.
 
 
  press space to generate
  press 's' to save a .txt and a .png
  press 'r' to see a breakdown of non-repeating/POS tagged/Open Class tokens derived from the generated result
 
+	press 'p' to sonify the text using sounds from Freesound.org
 
  (c) cristian vogel 2010-2019
 
- RiTa natural language library by Daniel C. Howe
- http://www.rednoise.org/rita/
+SonoPort Freesound-Java
+https://github.com/Sonoport/freesound-java
+
+RiTa natural language library by Daniel C. Howe
+http://www.rednoise.org/rita/
 
  */
 package com.neverEngineLabs.GML2019;
@@ -24,7 +28,6 @@ import com.sonoport.freesound.query.search.SearchFilter;
 import com.sonoport.freesound.query.search.SortOrder;
 import com.sonoport.freesound.query.search.TextSearch;
 import com.sonoport.freesound.response.Response;
-import javafx.scene.media.AudioClip;
 import processing.core.PApplet;
 import processing.core.PFont;
 import processing.core.PGraphics;
@@ -32,11 +35,10 @@ import processing.data.StringList;
 import rita.RiTa;
 
 
-import java.lang.reflect.Array;
 import java.util.*;
 
 
-public class RunGML extends PApplet {
+public class GML_SonifiedHaikus extends PApplet {
 	//constructor with field assignments
 	private GrammarGML grammar = new GrammarGML(this);
 	private String[] lines = {
@@ -97,7 +99,6 @@ public class RunGML extends PApplet {
 		freesoundClient = new FreesoundClient(clientId, clientSecret);
 
 
-
 		try {
 			freeSoundTextSearchThenPlay("hello", 3);
 			freeSoundTextSearchThenPlay("welcome", 3);
@@ -107,9 +108,7 @@ public class RunGML extends PApplet {
 			text("PLEASE CHECK YOUR INTERNET CONNECTION", displayWidth/4, displayHeight / 2);
 			fill(250);
 		}
-
 		setTitleBar(latestTitle + grammar.getLatestTimeStamp());
-
 	}
 
 
@@ -204,7 +203,6 @@ public class RunGML extends PApplet {
 			println("Not enough tags, selecting at random...");
 			}
 
-
 		JsonElement duration = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("duration");
 		JsonElement url = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("url");
 		JsonElement previews = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("previews");
@@ -219,6 +217,7 @@ public class RunGML extends PApplet {
         println ("Playing result " + selectedResult + " out of "+ results.getAsJsonArray().size() + " results for "+token+" with duration: "+ duration.toString() + " start offset:" + offset) ;
 
 		// background audio loading thread
+		setTitleBar("Sonifying \""+token+"\"");
 		AudioStreamer _audioStreamer = new AudioStreamer(_url, offset, priority);
         _audioStreamer.start();
 	}
@@ -284,16 +283,17 @@ public class RunGML extends PApplet {
         String [] wordsToSonify = grammar.currentExpansionReduced;
          if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
 
-		setTitleBar("Sonifying "+latestTitle+" using sounds from FreeSound.org");
 
         for (int i = 0; i < wordsToSonify.length; i++) {
             //15 voices max?
             if (i>0) {
                 freeSoundTextSearchThenPlay(wordsToSonify[i], i*3, 15,i % 15);
             } else {
-                freeSoundTextSearchThenPlay(wordsToSonify[i], 0.5f, 30, 1 );
+                freeSoundTextSearchThenPlay(wordsToSonify[i], 0.5f, 35, 1 );
             }
         }
+
+        setTitleBar("Sonification complete!");
 
 
 
@@ -471,7 +471,6 @@ public class RunGML extends PApplet {
 	public void displayReduced() {
 		if (displayingReduced) {
 
-
 			displayGeneratedTextLayout(
 					latestTitle + " (Reduced)",
 					grammar.arrangeTokensIntoLines(grammar.currentExpansionReduced, 6),
@@ -481,11 +480,7 @@ public class RunGML extends PApplet {
 		} else {
 			displayGeneratedTextLayout(latestTitle, lines, TOKEN+4);
 		}
-
-
 	}
-
-
 
 
 /// Java main
@@ -493,8 +488,8 @@ public class RunGML extends PApplet {
 	public static void main(String[] args) {
 
 
-		System.out.println("Running " + RunGML.class.getName());
-		String[] options = {  RunGML.class.getName() };
+		System.out.println("Running " + GML_SonifiedHaikus.class.getName());
+		String[] options = {  GML_SonifiedHaikus.class.getName() };
 		PApplet.main(options);
 	}
 
