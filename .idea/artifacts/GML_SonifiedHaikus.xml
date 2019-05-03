@@ -1,0 +1,24 @@
+<component name="ArtifactManager">
+  <artifact name="GML_SonifiedHaikus">
+    <output-path>$PROJECT_DIR$/Build</output-path>
+    <root id="root">
+      <element id="directory" name="data">
+        <element id="dir-copy" path="$PROJECT_DIR$/data" />
+      </element>
+      <element id="directory" name="libs">
+        <element id="dir-copy" path="$PROJECT_DIR$/libs" />
+      </element>
+      <element id="archive" name="GML_SonifiedHaikus.jar">
+        <element id="library" level="project" name="GML" />
+        <element id="library" level="project" name="junit" />
+        <element id="library" level="project" name="rita" />
+        <element id="module-output" name="GML" />
+        <element id="module-source" name="GML" />
+        <element id="library" level="project" name="core3" />
+        <element id="library" level="project" name="freesound-java-0.5.0" />
+        <element id="library" level="project" name="gson-2.8.5" />
+        <element id="library" level="project" name="snakeyaml-1.15" />
+      </element>
+    </root>
+  </artifact>
+</component>

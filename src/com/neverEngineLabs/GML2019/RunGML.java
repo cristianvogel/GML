@@ -68,12 +68,6 @@ public class RunGML extends PApplet {
 	private String clientId = "7RllqFNPuvjj7U34vMu5";
 	private String clientSecret = "QPGtFa2wB0bMIHxffUhvYJMlQU0XxhZYtT9so0jE";
 
-	// Audio
-	AudioClip freeSound;
-
-
-
-
 	////////////////////////
 
 
@@ -167,7 +161,7 @@ public class RunGML extends PApplet {
 			return;
 		}
 
-		if (httpStatusCode == 200) {
+		if (httpStatusCode == 400) {
 			println("Http status code = " + httpStatusCode +": fail");
 			setTitleBar("HTTP Error" + httpStatusCode);
 			return;

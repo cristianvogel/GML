@@ -17,11 +17,11 @@ import rita.RiTaEvent;
  * A typical use in Processing might be:<pre>
     void setup(RiTaEvent re)
     {
-      new RiTimer(this, 1.0);
+      new RiTimerSynchronised(this, 1.0);
       
         OR
         
-      RiTimer.start(this, 1.0);  
+      RiTimerSynchronised.start(this, 1.0);
       
               OR
         
@@ -37,11 +37,11 @@ import rita.RiTaEvent;
     or, if (outside of Processing) and the callback (myEventFunc(re)) was in another class (e.g., MyApplet):<pre>
     public class MyApplet extends Applet 
     {
-      RiTimer timer;
+      RiTimerSynchronised timer;
       
       public void init()
       {
-        timer = new RiTimer(this, 1.0, "eventHandler");
+        timer = new RiTimerSynchronised(this, 1.0, "eventHandler");
       }
       
       void myEventFunc(RiTaEvent re)
@@ -81,7 +81,7 @@ public class RiTimer implements Constants
   
   public String toString()
   {
-    return "RiTimer#"+id;
+    return "RiTimerSynchronised#"+id;
   }
     
   private void init(float startOffset, float thePeriod)

@@ -7,12 +7,11 @@ package com.neverEngineLabs.GML2019;
 
 import javafx.scene.media.AudioClip;
 import rita.support.RiTimer;
-
-import java.util.concurrent.ThreadLocalRandom;
+import rita.support.RiTimerSynchronised;
 
 import static processing.core.PApplet.map;
 import static processing.core.PApplet.println;
-import static rita.RiTa.random;
+
 
 
 public class AudioStreamer extends Thread {
@@ -28,8 +27,7 @@ public class AudioStreamer extends Thread {
 
           private boolean _offsetTimerComplete;
           private float _startTime;
-          private  RiTimer _offsetTimer;
-          private ThreadLocalRandom _random;
+          private RiTimerSynchronised _offsetTimer;
 
     AudioStreamer (String url, float wait) {
 
@@ -42,8 +40,8 @@ public class AudioStreamer extends Thread {
             _priority = 1;
 
             if(wait != 0) {
-                _offsetTimer = new RiTimer(this, _startTime, "timerDone");
-                _offsetTimer.pauseFor(0.1f);
+                _offsetTimer = new RiTimerSynchronised(this, _startTime, "timerDone");
+
             } else _offsetTimerComplete = true;
         }
 
@@ -57,8 +55,9 @@ public class AudioStreamer extends Thread {
         _priority = priority;
 
         if(wait != 0) {
-            _offsetTimer = new RiTimer(this, _startTime, "timerDone");
-            //println(_offsetTimer.id()+" instantiatied");
+            _offsetTimer = new RiTimerSynchronised(this, _startTime, "timerDone");
+           // _offsetTimer.pauseFor(0.1f);
+            println(_offsetTimer.id()+" instantiatied");
         } else _offsetTimerComplete = true;
     }
 
@@ -73,7 +72,7 @@ public class AudioStreamer extends Thread {
 
 
     /**
-     * Callback method for RiTimer
+     * Callback method for RiTimerSynchronised
      */
     private void timerDone () {
 

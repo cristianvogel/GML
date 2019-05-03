@@ -405,7 +405,7 @@ public class RiTextBehavior implements Constants
             Method method = RiTa._findMethod(rt.getPApplet(), DEFAULT_CALLBACK,
                 new Class[] { RiTaEvent.class });
             
-            // Source should always be a RiText (or a RiTimer?)
+            // Source should always be a RiText (or a RiTimerSynchronised?)
             ok = (new RiTaEvent(this.getParent(), this.type)).fire(rt.getPApplet(), method);
           }
           catch (RiTaException e)
