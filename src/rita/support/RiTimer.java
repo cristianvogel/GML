@@ -17,11 +17,11 @@ import rita.RiTaEvent;
  * A typical use in Processing might be:<pre>
     void setup(RiTaEvent re)
     {
-      new RiTimerSynchronised(this, 1.0);
+      new RiTimer(this, 1.0);
       
         OR
-        
-      RiTimerSynchronised.start(this, 1.0);
+
+      RiTimer.start(this, 1.0);
       
               OR
         
@@ -37,11 +37,11 @@ import rita.RiTaEvent;
     or, if (outside of Processing) and the callback (myEventFunc(re)) was in another class (e.g., MyApplet):<pre>
     public class MyApplet extends Applet 
     {
-      RiTimerSynchronised timer;
+       RiTimer timer;
       
       public void init()
       {
-        timer = new RiTimerSynchronised(this, 1.0, "eventHandler");
+        timer = new RiTimer(this, 1.0, "eventHandler");
       }
       
       void myEventFunc(RiTaEvent re)
@@ -58,6 +58,7 @@ public class RiTimer implements Constants
   protected static int idGen = 0;
    
   protected Timer internalTimer;
+  private String timerName ="";
   protected boolean paused, isDaemon;
   protected float period;
   protected Object parent;
@@ -78,6 +79,17 @@ public class RiTimer implements Constants
     init(0, period);
     timers.add(this);
   }
+
+  public RiTimer(Object parent, String _timerName, float period, String callbackName) {
+
+    this.parent = parent;
+    this.period = period;
+    this.id = ++idGen;
+    this.callback = RiTa._findCallback(parent, callbackName);
+    this.timerName = _timerName;
+    init(0, period);
+    timers.add(this);
+  }
   
   public String toString()
   {
@@ -87,7 +99,7 @@ public class RiTimer implements Constants
   private void init(float startOffset, float thePeriod)
   {
     final RiTimer rt = this;
-    (internalTimer = new Timer(isDaemon)).schedule(new TimerTask() {
+    (internalTimer = new Timer(timerName, isDaemon)).schedule(new TimerTask() {
       public void run()
       {
         new RiTaEvent(rt, EventType.Timer, id).fire(parent, callback);
@@ -98,6 +110,10 @@ public class RiTimer implements Constants
   public void stop() {
     
     internalTimer.cancel();
+  }
+
+  public String getTimerName() {
+    return timerName;
   }
 
   public RiTimer pause(boolean b) {

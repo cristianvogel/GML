@@ -219,7 +219,7 @@ public class GrammarGML {
 
 	String getParentRuleFromTerminal(String terminal) {
 
-
+		println("Running getParentRuleFromTerminal for:\"terminal\"");
 		String target = terminal;
 		String parentRule = "";
 		int targetIndex = -1;
@@ -227,8 +227,7 @@ public class GrammarGML {
 		Map defs = grammar._rules;
 		for (Object o : defs.keySet()) {
 			String rule =  o.toString();
-			println(rule + ": " + defs.get(rule));
-
+			//println(rule + ": " + defs.get(rule));
 			String def = defs.get(rule).toString();
 			// converts all the terminals of the
 			// rule into a string

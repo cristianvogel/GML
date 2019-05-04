@@ -30,9 +30,9 @@ import com.sonoport.freesound.query.search.TextSearch;
 import com.sonoport.freesound.response.Response;
 import processing.core.PApplet;
 import processing.core.PFont;
-import processing.core.PGraphics;
 import processing.data.StringList;
 import rita.RiTa;
+import rita.support.RiTimer;
 
 
 import java.util.*;
@@ -54,12 +54,10 @@ public class GML_SonifiedHaikus extends PApplet {
 	private int generationCounter = 0;
 
 
-
 	//font sizes
     private final int  H1=36, P=20, TINY=12, TOKEN=32;
     private Map<Integer,PFont> fonts = new HashMap<>();
 
-	private PGraphics offscreenBuffer;
 	private boolean displayingInfo = false;
 	private boolean displayingReduced = false;
 
@@ -70,7 +68,15 @@ public class GML_SonifiedHaikus extends PApplet {
 	FreesoundClient freesoundClient;
 	private String clientId = "7RllqFNPuvjj7U34vMu5";
 	private String clientSecret = "QPGtFa2wB0bMIHxffUhvYJMlQU0XxhZYtT9so0jE";
+	private ArrayList<Integer>  _taggedHits;
 
+	//timers
+	private float previousDuration = 0.1f;
+	private String[] wordsToSonify;
+
+
+	private float _startTime;
+	private Timer _localStatusTimer;
 	////////////////////////
 
 
@@ -97,18 +103,22 @@ public class GML_SonifiedHaikus extends PApplet {
 
 		setTitleBar("Loading, please wait...");
 		freesoundClient = new FreesoundClient(clientId, clientSecret);
+		_taggedHits = new ArrayList<>();
 
 
 		try {
-			freeSoundTextSearchThenPlay("hello", 3);
-			freeSoundTextSearchThenPlay("welcome", 3);
+			String [] greet = {"welcome", "hello", "greeting", "hola", "hi", "greet", "welcoming"};
+			freeSoundTextSearchThenPlay(greet[RiTa.random(greet.length)], 3);
 		} catch ( Exception e) {
+			e.printStackTrace();
 			setTitleBar( "> PLEASE CHECK YOUR INTERNET CONNECTION <");
 			fill(255,10,10);
 			text("PLEASE CHECK YOUR INTERNET CONNECTION", displayWidth/4, displayHeight / 2);
 			fill(250);
 		}
 		setTitleBar(latestTitle + grammar.getLatestTimeStamp());
+
+
 	}
 
 
@@ -124,23 +134,24 @@ public class GML_SonifiedHaikus extends PApplet {
     /**
      * text search of Freesound.org through the API which then sets up the playlist and player start
      * plus a bunch of overloads
-     *  @param token the word to search for
+	 * TODO: Encapsulate FreeSound processing
+     *  @param searchString the word to search for
      * @param offset a delay to the start of audio playback in s
-     * @param offsetByDuration set to true to offset by the same duration as the file
      * @param priority polyphony of 15 there can be a priority to voice offloading
      */
 
-	public void freeSoundTextSearchThenPlay(String token, float offset, boolean offsetByDuration, float maxDuration, int priority) {
+	public void freeSoundTextSearchThenPlay(String searchString, float offset, float maxDuration, int priority, int id) throws InterruptedException {
 
 
 		Set<String> fields = new HashSet<>(Arrays.asList("id", "url", "previews", "tags", "duration"));
-		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-26 TO -16]" );
+		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-26 TO -14]" );
 		SearchFilter _filter2 = new SearchFilter("duration", "[0.5 TO "+maxDuration+"]" );
 
-		println("Searching for "+token);
+
+		println("Searching for \""+searchString+"\"");
 		final TextSearch textSearch =
                 new TextSearch()
-                        .searchString(token)
+                        .searchString(searchString)
                         .sortOrder(SortOrder.RATING_DESCENDING)
                         .filter(_filter1).filter( _filter2).includeFields(fields)
                         .pageSize(RiTa.random(50,150));
@@ -181,23 +192,22 @@ public class GML_SonifiedHaikus extends PApplet {
 		 * so pick randomly from the results
 		 */
 
-		ArrayList<Integer>  _taggedHits = new ArrayList<Integer>();
-
+		_taggedHits.clear();
 		int selectedResult = 0;
 
 		for (int i = 0; i < _bounds; i++)
 		{
 			JsonElement tags = results.getAsJsonArray().get(i).getAsJsonObject().get("tags");
-			if (tags.toString().contains(token)) {
+			if (tags.toString().contains(searchString)) {
 				_taggedHits.add(i);
 			}
 		}
 
 
-		// tags are not always availabe so try to pick from a set of at least 2 hits
-		if (_taggedHits.size() > 2) {
-			selectedResult = _taggedHits.get(RiTa.random(0, _taggedHits.size() ));
-			println("Selecting from Tag hits:"+_taggedHits.toString());
+		// tags are not always abundant so try to pick from a set of at least 2 hits
+		if (_taggedHits.size() > 4) {
+			selectedResult = _taggedHits.get(RiTa.random(0, _taggedHits.size()));
+			println("Selecting from"+_taggedHits.size()+" tags");
 		} else {
 			selectedResult = RiTa.random(0,_bounds);
 			println("Not enough tags, selecting at random...");
@@ -210,29 +220,38 @@ public class GML_SonifiedHaikus extends PApplet {
 
 		String _url = removeFirstAndLast(mp3Hq.toString()); //the GSON generated JSON primitives seem to come in with magic-quotes
 
-		if (offsetByDuration) {
-			offset = duration.getAsFloat();
-		}
 
-        println ("Playing result " + selectedResult + " out of "+ results.getAsJsonArray().size() + " results for "+token+" with duration: "+ duration.toString() + " start offset:" + offset) ;
 
-		// background audio loading thread
-		setTitleBar("Sonifying \""+token+"\"");
-		AudioStreamer _audioStreamer = new AudioStreamer(_url, offset, priority);
+		float shortestDuration = min(offset, previousDuration);
+        println ("Result " + selectedResult + " out of "+ results.getAsJsonArray().size() + " results for "+searchString+" with file duration: "+ duration.toString() + " start offset:" + shortestDuration) ;
+
+		// background audio runnable
+		AudioStreamer _audioStreamer = new AudioStreamer(_url, shortestDuration, priority,searchString);
+		//println("Threads:" + Thread.activeCount());
+
         _audioStreamer.start();
+		previousDuration = duration.getAsFloat();
 	}
+
+
 
 	private void freeSoundTextSearchThenPlay(String token, float maxDuration) {
-		freeSoundTextSearchThenPlay(token, 0, false, maxDuration, 1);
+		try {
+			freeSoundTextSearchThenPlay(token, 0.1f, maxDuration, 1, millis());
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 
-    private void freeSoundTextSearchThenPlay(String token, Boolean offsetByDuration, float maxDuration, int voicePriority) {
-        freeSoundTextSearchThenPlay(token, 0, offsetByDuration, maxDuration, voicePriority);
-    }
+    private void freeSoundTextSearchThenPlay(String token, float maxDuration, int voicePriority) {
+		try {
+			freeSoundTextSearchThenPlay(token, 0.1f, maxDuration, voicePriority,  millis());
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
 
-    private void freeSoundTextSearchThenPlay(String token, float offset, float maxDuration, int voicePriority) {
-        freeSoundTextSearchThenPlay(token, offset, false, maxDuration, voicePriority);
-    }
+
 
     /**
      * the following code will retrieve a SoundResponse from a integer unique ID
@@ -278,25 +297,20 @@ public class GML_SonifiedHaikus extends PApplet {
 		}
 	}
 
-    private void sonifyGeneratedText () {
+    private void sonifyGeneratedText () throws InterruptedException {
 
-        String [] wordsToSonify = grammar.currentExpansionReduced;
+        wordsToSonify = grammar.currentExpansionReduced;
          if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
-
-
-        for (int i = 0; i < wordsToSonify.length; i++) {
-            //15 voices max?
-            if (i>0) {
-                freeSoundTextSearchThenPlay(wordsToSonify[i], i*3, 15,i % 15);
-            } else {
-                freeSoundTextSearchThenPlay(wordsToSonify[i], 0.5f, 35, 1 );
-            }
-        }
-
-        setTitleBar("Sonification complete!");
-
-
-
+		setTitleBar("Loading audio...");
+		//15 voices max?
+		for (int i = 0; i < wordsToSonify.length; i++)
+		{
+			if (i > 0)
+				{freeSoundTextSearchThenPlay(wordsToSonify[i], i * 3, 15, i % 15, i);}
+			else // make first select potentially play for longer duration and start straightaway
+				{freeSoundTextSearchThenPlay(wordsToSonify[i], 0.5f, 35, 1, i);}
+		}
+		setTitleBar(latestTitle);
     }
 
 	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight, int FONT) {
@@ -317,8 +331,6 @@ public class GML_SonifiedHaikus extends PApplet {
 
 	}
 
-
-
 	private void setFont(int tag) {
 		textFont(fonts.get(tag));
 		textSize(tag);
@@ -327,10 +339,7 @@ public class GML_SonifiedHaikus extends PApplet {
 	private void drawDecorativeBackground(int backgroundGrey, int numberOfLines) {
 
 		background(backgroundGrey);
-
-		//fill(250);
 		noiseDetail(8, 0.8f);
-
 		if (numberOfLines > 1) {
 			for (int i = 1; i < numberOfLines * 10; i++) {
 
@@ -417,7 +426,11 @@ public class GML_SonifiedHaikus extends PApplet {
 		}
 
 		if (key=='p' || key=='P') {
-			sonifyGeneratedText();
+			try {
+				sonifyGeneratedText();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 

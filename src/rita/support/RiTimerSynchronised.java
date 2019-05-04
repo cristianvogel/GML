@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import com.neverEngineLabs.GML2019.AudioStreamer;
 import rita.RiTa;
 import rita.RiTaEvent;
 
@@ -69,6 +68,7 @@ public class RiTimerSynchronised implements Constants
     protected volatile float period;
     protected volatile Object parent;
     protected volatile Method callback;
+    private volatile String _token;
     private volatile int  id;
 
 
@@ -80,13 +80,14 @@ public class RiTimerSynchronised implements Constants
     }
 **/
 
-    public  RiTimerSynchronised(Object parent, float period, String callbackName) {
+    public  RiTimerSynchronised(Object parent, float period, String callbackName, String token) {
 
         this.parent = parent;
         this.period = period;
         this.id = ++idGen;
+        this._token = token;
         this.callback = RiTa._findCallback(parent, callbackName);
-        init(0, period);
+        init(period, 0.1f);
         timers.add(this);
     }
 
@@ -98,7 +99,7 @@ public class RiTimerSynchronised implements Constants
     private synchronized void init(float startOffset, float thePeriod)
     {
         final RiTimerSynchronised rt = this;
-        (internalTimer = new Timer(isDaemon)).schedule(new TimerTask() {
+        (internalTimer = new Timer(_token, isDaemon)).schedule(new TimerTask() {
             public void run()
             {
                 new RiTaEvent(rt, EventType.Timer, id).fire(parent, callback);
@@ -146,19 +147,6 @@ public class RiTimerSynchronised implements Constants
 
     public synchronized static void main(String[] args) throws InterruptedException
     {
-        RiTimer rt = new RiTimer(new Object() {
-            public void onRiTaEvent(RiTaEvent rte) {
-                System.out.println(rte.source()+" :: "+System.currentTimeMillis()+ " :: "+rte.data);
-            }
-        }, 1);
-
-        System.out.println(rt.id());
-        RiTimer rt2 = new RiTimer(new Object() {
-            public void dynFun() {
-                System.out.println(System.currentTimeMillis());
-            }
-        }, 1, "dynFun");
-        System.out.println(rt2);
 
     }
 
