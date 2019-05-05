@@ -47,7 +47,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
             "or press 'S' to save the text to disk...\n\n" +
             "or press 'P' to play the text as sound" };
 	private String[] linesAlt ;
-	private String currentGrammarFile = "data/grammarFiles/NewsHeadlines.json";
+	private String currentGrammarFile = "data/grammarFiles/haikuGrammar.json";
 	private String latestTitle = "Welcome to Sonified Haiku Generator!";
 	private String latestTimeStamp = "Current grammar: "+currentGrammarFile;
 	private Boolean savedFlag = false;
@@ -144,7 +144,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 
 
 		Set<String> fields = new HashSet<>(Arrays.asList("id", "url", "previews", "tags", "duration"));
-		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-23 TO -14]" );
+		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-23 TO -8]" );
 		SearchFilter _filter2 = new SearchFilter("duration", "[1 TO "+maxDuration+"]" );
 
 
@@ -152,9 +152,9 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 		final TextSearch textSearch =
                 new TextSearch()
                         .searchString(searchString)
-                        .sortOrder(SortOrder.RATING_DESCENDING)
+                        .sortOrder(SortOrder.CREATED_DESCENDING)
                         .filter(_filter1).filter( _filter2).includeFields(fields)
-                        .pageSize(150);
+                        .pageSize(RiTa.random(50,150));
 
 		Response response = null;
 		try {
@@ -310,6 +310,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
          if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
 		setTitleBar("Loading audio...");
 		//15 voices max?
+
 		for (int i = 0; i < wordsToSonify.length; i++)
 		{
 			if (i > 0)
@@ -317,7 +318,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 			else // make first select potentially play for longer duration and start straightaway
 				{freeSoundTextSearchThenPlay(wordsToSonify[i], 0.5f, 35, 1, i);}
 		}
-		setTitleBar(latestTitle);
+
     }
 
 	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight, int FONT) {
@@ -517,5 +518,14 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 
 	public void playbackStart(String url, String token) {
 		setTitleBar("Sonifying \""+token+"\"");
+	}
+
+
+	public void playbackStatus(String threadStatus) {
+		if (wordsToSonify != null) {
+		if ((wordsToSonify[wordsToSonify.length-1] + " stopped").equals(threadStatus)) {
+			setTitleBar(latestTitle+" was sonified!");
+			}
+		}
 	}
 }

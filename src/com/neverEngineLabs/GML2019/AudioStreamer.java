@@ -6,11 +6,11 @@
 package com.neverEngineLabs.GML2019;
 
 import javafx.scene.media.AudioClip;
-import processing.core.PApplet;
-import processing.core.PImage;
 
 import java.util.Timer;
 import java.util.TimerTask;
+
+import static processing.core.PApplet.map;
 import static processing.core.PApplet.println;
 
 
@@ -81,7 +81,11 @@ public class AudioStreamer extends Thread  {
             //     idea to spatialise ... not really working
             //     _soundClip.play(_volume, 0 , 1, map(_priority,0,15,-1,1), _priority );
 
-            _soundClip.play(_volume, 0, 1, 0.5, _priority);
+            _soundClip.play(_volume, 0, 1, map(_priority,0,15,0,1), _priority);
+
+        while (_soundClip.isPlaying())
+        { _parent.playbackStatus(_token+" playing");}
+        _parent.playbackStatus(_token+" stopped");
         }
 
 }
