@@ -14,9 +14,6 @@ import static processing.core.PApplet.println;
 
 public class AudioStreamer extends Thread {
 
-
-
-
     private int _priority;
     private String _url;
     private String _token = "";
@@ -49,51 +46,20 @@ public class AudioStreamer extends Thread {
     }
 
     public AudioStreamer(String url, float offset, int priority) {
-        this.setName(url);
-        _url = url;
-        _volume = 0.9;
-        _soundClip = new AudioClip(_url);
-        _priority = priority;
-        _timer = new Timer();
-
-        _callback = new TimerTask() {
-            @Override
-            public void run() {
-                play();
-                cancel();
-            }
-        };
-        _timer = new Timer ();
-        _timer.schedule(_callback, (long) (offset+0.5) * 1000);
+       this(url,offset);
+       _priority = priority;
     }
 
+
     public AudioStreamer(String url, float offset, int priority, String token) {
-
-        this.setName(url);
+        this(url, offset,priority);
         _token = token;
-        _url = url;
-        _volume = 0.9;
-        _soundClip = new AudioClip(_url);
-        _priority = priority;
-        _callback = new TimerTask() {
-            @Override
-            public void run() {
-                play();
-                cancel();
-            }
-        };
-        _timer = new Timer( _token);
-        _timer.schedule(_callback, (long) (offset+0.5) * 1000);
-
     }
 
 
     public void play() {
 
-
             println("Starting audio for \'" + _token + "\' from " + _url);
-
-
 
             //     idea to spatialise ... not really working
             //     _soundClip.play(_volume, 0 , 1, map(_priority,0,15,-1,1), _priority );
