@@ -19,7 +19,7 @@ import static processing.core.PApplet.println;
 public class AudioStreamer extends Thread  {
 
 
-    GML_SonifiedHaikus _parent;
+    IStreamNotify streamNotify;
     private int _id;
     private int _priority;
     private String _url;
@@ -36,7 +36,7 @@ public class AudioStreamer extends Thread  {
     public AudioStreamer( GML_SonifiedHaikus main, String url, float offset) {
 
         this.setName(url);
-        _parent = main;
+        streamNotify = main;
         _url = url;
         _volume = 2;
         _soundClip = new AudioClip(_url);
@@ -76,7 +76,7 @@ public class AudioStreamer extends Thread  {
 
             println("Starting audio for \'" + _token + "\' from " + _url + " in thread "+_id);
 
-            _parent.playbackStart(_url, _token);
+        streamNotify.playbackStart(_url, _token);
 
             //     idea to spatialise ... not really working
             //     _soundClip.play(_volume, 0 , 1, map(_priority,0,15,-1,1), _priority );
@@ -84,8 +84,8 @@ public class AudioStreamer extends Thread  {
             _soundClip.play(_volume, 0, 1, map(_priority,0,15,0,1), _priority);
 
         while (_soundClip.isPlaying())
-        { _parent.playbackStatus(_token+" playing");}
-        _parent.playbackStatus(_token+" stopped");
+        { streamNotify.playbackStatus(_token+" playing");}
+        streamNotify.playbackStatus(_token+" stopped");
         }
 
 }
