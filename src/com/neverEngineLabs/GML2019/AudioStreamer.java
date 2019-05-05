@@ -6,14 +6,21 @@
 package com.neverEngineLabs.GML2019;
 
 import javafx.scene.media.AudioClip;
+import processing.core.PApplet;
+import processing.core.PImage;
 
 import java.util.Timer;
 import java.util.TimerTask;
 import static processing.core.PApplet.println;
 
 
-public class AudioStreamer extends Thread {
 
+
+public class AudioStreamer extends Thread  {
+
+
+    GML_SonifiedHaikus _parent;
+    private int _id;
     private int _priority;
     private String _url;
     private String _token = "";
@@ -26,11 +33,12 @@ public class AudioStreamer extends Thread {
     private Timer _timer;
 
 
-    public AudioStreamer(String url, float offset) {
+    public AudioStreamer( GML_SonifiedHaikus main, String url, float offset) {
 
         this.setName(url);
+        _parent = main;
         _url = url;
-        _volume = 0.9;
+        _volume = 2;
         _soundClip = new AudioClip(_url);
         _priority = 1;
         _timer = new Timer();
@@ -41,31 +49,39 @@ public class AudioStreamer extends Thread {
                 cancel();
             }
         };
+
         _timer = new Timer ();
-        _timer.schedule(_callback, (long) (offset+0.5) * 1000);
+        _timer.schedule(_callback, (long) (offset+0.5) * 500); //compensate for buffering by halving requested delay
     }
 
-    public AudioStreamer(String url, float offset, int priority) {
-       this(url,offset);
+    public AudioStreamer(GML_SonifiedHaikus main, String url, float offset, int priority) {
+       this(main, url,offset);
        _priority = priority;
     }
 
 
-    public AudioStreamer(String url, float offset, int priority, String token) {
-        this(url, offset,priority);
+    public AudioStreamer(GML_SonifiedHaikus main, String url, float offset, int priority, String token) {
+        this(main, url, offset,priority);
         _token = token;
+    }
+
+    public AudioStreamer(GML_SonifiedHaikus main, String url, float offset, int priority, String searchString, int id) {
+        this(main, url, offset, priority, searchString);
+                _id = id;
+        this.setName("AudioThread"+_id);
     }
 
 
     public void play() {
 
-            println("Starting audio for \'" + _token + "\' from " + _url);
+            println("Starting audio for \'" + _token + "\' from " + _url + " in thread "+_id);
+
+            _parent.playbackStart(_url, _token);
 
             //     idea to spatialise ... not really working
             //     _soundClip.play(_volume, 0 , 1, map(_priority,0,15,-1,1), _priority );
 
             _soundClip.play(_volume, 0, 1, 0.5, _priority);
-
         }
 
 }

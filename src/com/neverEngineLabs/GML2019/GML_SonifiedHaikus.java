@@ -38,7 +38,7 @@ import rita.support.RiTimer;
 import java.util.*;
 
 
-public class GML_SonifiedHaikus extends PApplet {
+public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 	//constructor with field assignments
 	private GrammarGML grammar = new GrammarGML(this);
 	private String[] lines = {
@@ -47,7 +47,7 @@ public class GML_SonifiedHaikus extends PApplet {
             "or press 'S' to save the text to disk...\n\n" +
             "or press 'P' to play the text as sound" };
 	private String[] linesAlt ;
-	private String currentGrammarFile = "data/grammarFiles/haikuGrammar.json";
+	private String currentGrammarFile = "data/grammarFiles/NewsHeadlines.json";
 	private String latestTitle = "Welcome to Sonified Haiku Generator!";
 	private String latestTimeStamp = "Current grammar: "+currentGrammarFile;
 	private Boolean savedFlag = false;
@@ -55,7 +55,7 @@ public class GML_SonifiedHaikus extends PApplet {
 
 
 	//font sizes
-    private final int  H1=36, P=20, TINY=12, TOKEN=32;
+    private final int  H1=36, P=20, TINY=12, TOKEN=24;
     private Map<Integer,PFont> fonts = new HashMap<>();
 
 	private boolean displayingInfo = false;
@@ -144,8 +144,8 @@ public class GML_SonifiedHaikus extends PApplet {
 
 
 		Set<String> fields = new HashSet<>(Arrays.asList("id", "url", "previews", "tags", "duration"));
-		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-26 TO -14]" );
-		SearchFilter _filter2 = new SearchFilter("duration", "[0.5 TO "+maxDuration+"]" );
+		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-23 TO -14]" );
+		SearchFilter _filter2 = new SearchFilter("duration", "[1 TO "+maxDuration+"]" );
 
 
 		println("Searching for \""+searchString+"\"");
@@ -154,7 +154,7 @@ public class GML_SonifiedHaikus extends PApplet {
                         .searchString(searchString)
                         .sortOrder(SortOrder.RATING_DESCENDING)
                         .filter(_filter1).filter( _filter2).includeFields(fields)
-                        .pageSize(RiTa.random(50,150));
+                        .pageSize(150);
 
 		Response response = null;
 		try {
@@ -204,12 +204,19 @@ public class GML_SonifiedHaikus extends PApplet {
 		}
 
 
-		// tags are not always abundant so try to pick from a set of at least 2 hits
+		// tags are not always abundant so try to pick from a set of at least 4 hits
 		if (_taggedHits.size() > 4) {
-			selectedResult = _taggedHits.get(RiTa.random(0, _taggedHits.size()));
+			for (int i = 0; i < 3 ; i++) {
+				// do random pick three times
+				selectedResult = _taggedHits.get(RiTa.random(0, _taggedHits.size()));
+			}
+
 			println("Selecting from"+_taggedHits.size()+" tags");
 		} else {
-			selectedResult = RiTa.random(0,_bounds);
+			for (int i = 0; i < 3 ; i++) {
+				// do random pick three times
+				selectedResult = RiTa.random(0, _bounds);
+			}
 			println("Not enough tags, selecting at random...");
 			}
 
@@ -226,7 +233,7 @@ public class GML_SonifiedHaikus extends PApplet {
         println ("Result " + selectedResult + " out of "+ results.getAsJsonArray().size() + " results for "+searchString+" with file duration: "+ duration.toString() + " start offset:" + shortestDuration) ;
 
 		// background audio runnable
-		AudioStreamer _audioStreamer = new AudioStreamer(_url, shortestDuration, priority,searchString);
+		AudioStreamer _audioStreamer = new AudioStreamer(this, _url, shortestDuration, priority,searchString, id);
 		//println("Threads:" + Thread.activeCount());
 
         _audioStreamer.start();
@@ -426,6 +433,7 @@ public class GML_SonifiedHaikus extends PApplet {
 		}
 
 		if (key=='p' || key=='P') {
+
 			try {
 				sonifyGeneratedText();
 			} catch (InterruptedException e) {
@@ -506,4 +514,8 @@ public class GML_SonifiedHaikus extends PApplet {
 		PApplet.main(options);
 	}
 
+
+	public void playbackStart(String url, String token) {
+		setTitleBar("Sonifying \""+token+"\"");
+	}
 }
