@@ -36,6 +36,7 @@ import rita.RiText;
 
 
 import java.io.File;
+import java.net.MalformedURLException;
 import java.util.*;
 
 
@@ -63,7 +64,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 	public String [] buttonLabels;
 	private boolean displayingInfo = false;
 	private boolean displayingReduced = false;
-
+public File clickSound;
 	private RiText [] buttons;
 
 	/**
@@ -79,9 +80,10 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 	private float previousDuration = 0.1f;
 	private String[] wordsToSonify;
 
-
+	private int clickCount = 0;
 	private float _startTime;
 	private Timer _localStatusTimer;
+
 	////////////////////////
 
 
@@ -119,6 +121,8 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 			buttonLabels [i] = grammar.toTitleCase( fn.toLowerCase().substring(0, fn.indexOf(".json") ));
 		}
 
+		clickSound = new File ("data/sounds/click.mp3");
+
 		try {
 			String [] greet = {"welcome", "hello", "greeting", "hola", "hi", "greet", "welcoming"};
 			freeSoundTextSearchThenPlay(greet[RiTa.random(greet.length)], 3);
@@ -152,32 +156,44 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 
 		//todo: make UI Classes and Methods
 
-		if (generationCounter<1) {
-			for (RiText rt : buttons) rt.colorTo(0, 180, 120f, 255, 2);
-			RiText.drawAll(buttons);
-			_picked = RiText.picked(mouseX, mouseY);
 
+		if (generationCounter<1) {
+
+			RiText.drawAll(buttons);
+			for (RiText rt : buttons) rt.colorTo(0, 180, 120f, 255, 2);
+
+			_picked = RiText.picked(mouseX, mouseY);
+			if (_picked.length == 0) clickCount=0;
 			if (_picked != null && _picked.length > 0) {
 
 				RiText rt = _picked[_picked.length - 1];
-
+				cursor(HAND);
 				for (int i = 0; i < buttons.length; i++) {
 
 					buttons[i].boundingFill(30);
 					if (rt == buttons[i]) {
 						buttons[i].boundingFill(60);
 
-						if (mousePressed) {
+
+						if (mousePressed && clickCount==0) {
+							clickCount++;
 							currentGrammarFile = grammarFiles[i];
+
+							try {
+								AudioStreamer click = new AudioStreamer(  this, clickSound.toURI().toURL().toString(),0.1f);
+							} catch (MalformedURLException e) {
+								e.printStackTrace();
+							}
 							grammar.loadFrom("data/grammarFiles/"+currentGrammarFile);
+
 							println("Chosen new grammar file "+currentGrammarFile);
 
-							buttons[i].colorTo(0, 255, 255, 255, 1);
+
 						}
 					}
 				}
 
-			}
+			} else { cursor(ARROW);}
 
 		}
 
@@ -461,6 +477,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 
 		if (key == 'g' || key =='G') {
 			generationCounter = 0;
+			clickCount = 0;
 		}
 
 
