@@ -771,8 +771,9 @@ public class RiText implements Constants //RiTextIF
     else
       p.noStroke();
 
-    p.rectMode(PApplet.CORNER);
-    p.rect(boundingBox.x, boundingBox.y, boundingBox.w, boundingBox.h);
+   // p.rectMode(PApplet.CORNER);
+      p.rectMode(PApplet.CORNER);
+    p.rect(boundingBox.x, boundingBox.y, boundingBox.w, boundingBox.h, 10);
   }
 
   /**
@@ -1001,6 +1002,7 @@ public class RiText implements Constants //RiTextIF
    */
   public boolean isOffscreen()
   {
+
     return isOffscreen(pApplet.g);
   }
 
@@ -2289,8 +2291,11 @@ public class RiText implements Constants //RiTextIF
     float bbx = -bbw / 2f;
     float bby = -ascent;
 
+
+
     if (alignment == RiTa.LEFT)
       bbx += bbw / 2f;// + bbPadding / 2f;
+
 
     else if (alignment == RiTa.CENTER)
       ; // ok as is

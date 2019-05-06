@@ -33,7 +33,7 @@ public class AudioStreamer extends Thread  {
     private Timer _timer;
 
 
-    public AudioStreamer( GML_SonifiedHaikus main, String url, float offset) {
+    public AudioStreamer( IStreamNotify main, String url, float offset) {
 
         this.setName(url);
         streamNotify = main;
@@ -54,18 +54,18 @@ public class AudioStreamer extends Thread  {
         _timer.schedule(_callback, (long) (offset+0.5) * 500); //compensate for buffering by halving requested delay
     }
 
-    public AudioStreamer(GML_SonifiedHaikus main, String url, float offset, int priority) {
+    public AudioStreamer(IStreamNotify main, String url, float offset, int priority) {
        this(main, url,offset);
        _priority = priority;
     }
 
 
-    public AudioStreamer(GML_SonifiedHaikus main, String url, float offset, int priority, String token) {
+    public AudioStreamer(IStreamNotify main, String url, float offset, int priority, String token) {
         this(main, url, offset,priority);
         _token = token;
     }
 
-    public AudioStreamer(GML_SonifiedHaikus main, String url, float offset, int priority, String searchString, int id) {
+    public AudioStreamer(IStreamNotify main, String url, float offset, int priority, String searchString, int id) {
         this(main, url, offset, priority, searchString);
                 _id = id;
         this.setName("AudioThread"+_id);

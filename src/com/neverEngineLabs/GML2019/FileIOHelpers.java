@@ -2,6 +2,7 @@ package com.neverEngineLabs.GML2019;
 
 import processing.core.PApplet;
 import java.io.File;
+import java.util.ArrayList;
 
 
 public class FileIOHelpers extends PApplet
@@ -93,6 +94,25 @@ public class FileIOHelpers extends PApplet
         return new File(System.getProperty("user.home") + "/Desktop");
     }
 
+    /**
+     * List all the files under a directory
+     * @param directoryName to be listed
+     */
+
+    public static String [] listFiles(String directoryName){
+
+        ArrayList<String> filenames = null;
+        File directory = new File(directoryName);
+        //get all the files from a directory
+        File[] fList = directory.listFiles();
+
+        for (File file : fList){
+            if (file.isFile()){
+                filenames.add(file.getAbsolutePath());
+            }
+        }
+    return (String[]) filenames.toArray();
+    }
 
 }
 

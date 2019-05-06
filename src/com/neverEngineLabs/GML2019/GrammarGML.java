@@ -145,10 +145,11 @@ public class GrammarGML {
 		 */
 
 		//todo: functionality for selectable grammar files UI
-		java.io.File folder = new java.io.File("/data");
+		java.io.File folder = new java.io.File(asThisfile.getParent());
 
+		String [] contents = folder.list(movFilter);
 		// list the files in the data folder passing the filter as parameter
-		return folder.list(movFilter);
+		return contents;
 	}
 
 	// returns a filter (which returns true if file's extension is .json )

@@ -29,37 +29,42 @@ import com.sonoport.freesound.query.search.SortOrder;
 import com.sonoport.freesound.query.search.TextSearch;
 import com.sonoport.freesound.response.Response;
 import processing.core.PApplet;
-import processing.core.PFont;
+import processing.core.PGraphics;
 import processing.data.StringList;
 import rita.RiTa;
-import rita.support.RiTimer;
+import rita.RiText;
 
 
+import java.io.File;
 import java.util.*;
+
 
 
 public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 	//constructor with field assignments
 	private GrammarGML grammar = new GrammarGML(this);
 	private String[] lines = {
-	        "\n\nFirst press the Spacebar to generate a new text...\n\n" +
-            "then press 'R' to see the reduced text...\n\n" +
+	        "\n\nPress 'G' to choose a grammar file...\n\n" +
+            "then press SPACEBAR to generate a new text...\n\n" +
             "or press 'S' to save the text to disk...\n\n" +
-            "or press 'P' to play the text as sound" };
+            "or press 'P' to play the text as sound." };
 	private String[] linesAlt ;
+	private String [] grammarFiles;
 	private String currentGrammarFile = "data/grammarFiles/haikuGrammar.json";
 	private String latestTitle = "Welcome to Sonified Haiku Generator!";
 	private String latestTimeStamp = "Current grammar: "+currentGrammarFile;
 	private Boolean savedFlag = false;
-	private int generationCounter = 0;
+	private int generationCounter = 1;
 
+	private Type _fonts = new Type() ;
+	public  int  H1=36, P=20, TINY=12, TOKEN=24;
 
-	//font sizes
-    private final int  H1=36, P=20, TINY=12, TOKEN=24;
-    private Map<Integer,PFont> fonts = new HashMap<>();
-
+	public RiText [] _picked;
+	public String [] buttonLabels;
 	private boolean displayingInfo = false;
 	private boolean displayingReduced = false;
+
+	private RiText [] buttons;
 
 	/**
 	 * FreeSound.org
@@ -84,17 +89,17 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 
 		size(1000, (int) (displayHeight * 0.6) );
 		pixelDensity(displayDensity());
+
 	}
 
 	public void setup() {
 
-		fonts.put(TINY, createFont("data/fonts/Lato-Italic.ttf", TINY, false));
-		fonts.put(H1, createFont("data/fonts/Lato-Bold.ttf", H1, true));
-		fonts.put(P, createFont("data/fonts/Lato-Regular.ttf", P, true));
-		fonts.put(TOKEN, createFont("data/fonts/RobotoSlab-Regular.ttf", TOKEN, true));
+	    RiTa.start(this);
+		_fonts.init(this.g);
 
-	    grammar.loadFrom(currentGrammarFile); // todo:  user or random selection of new grammars from disk
-		setFont(P);
+	    grammar.loadFrom(currentGrammarFile);
+
+		_fonts.setP();
 		textAlign(CENTER, CENTER);
 
 		displayGeneratedTextLayout(latestTitle, lines, 28);
@@ -105,6 +110,14 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 		freesoundClient = new FreesoundClient(clientId, clientSecret);
 		_taggedHits = new ArrayList<>();
 
+		// todo: set up some null safety checks - this is all quick and dirty
+		grammarFiles = grammar.filesInSameDirectory(new File(currentGrammarFile));
+
+		buttonLabels = new String[grammarFiles.length];
+		for (int i = 0; i < grammarFiles.length; i++) {
+			String fn = grammarFiles[i];
+			buttonLabels [i] = grammar.toTitleCase( fn.toLowerCase().substring(0, fn.indexOf(".json") ));
+		}
 
 		try {
 			String [] greet = {"welcome", "hello", "greeting", "hola", "hi", "greet", "welcoming"};
@@ -113,10 +126,20 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 			e.printStackTrace();
 			setTitleBar( "> PLEASE CHECK YOUR INTERNET CONNECTION <");
 			fill(255,10,10);
-			text("PLEASE CHECK YOUR INTERNET CONNECTION", displayWidth/4, displayHeight / 2);
+			_fonts.setStyle(H1);
+			text("PLEASE CHECK YOUR INTERNET CONNECTION", width/4, height / 2);
 			fill(250);
 		}
 		setTitleBar(latestTitle + grammar.getLatestTimeStamp());
+
+		//initialise grammar select UI
+		RiText.defaultFont(_fonts.getFont(P));
+		buttons =  RiText.createLines(this,grammarFiles, width/2f,height/2f);
+		for (int i = 0; i < buttons.length; i++) {
+			buttons[i].boundingStroke(120).showBounds(true).align(CENTER);
+			buttons[i].boundingFill(30);
+			buttons[i].text(buttonLabels [i]);
+		}
 
 
 	}
@@ -127,9 +150,40 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
      */
 	public void draw() {
 
+		//todo: make UI Classes and Methods
 
+		if (generationCounter<1) {
+			for (RiText rt : buttons) rt.colorTo(0, 180, 120f, 255, 2);
+			RiText.drawAll(buttons);
+			_picked = RiText.picked(mouseX, mouseY);
+
+			if (_picked != null && _picked.length > 0) {
+
+				RiText rt = _picked[_picked.length - 1];
+
+				for (int i = 0; i < buttons.length; i++) {
+
+					buttons[i].boundingFill(30);
+					if (rt == buttons[i]) {
+						buttons[i].boundingFill(60);
+
+						if (mousePressed) {
+							currentGrammarFile = grammarFiles[i];
+							grammar.loadFrom("data/grammarFiles/"+currentGrammarFile);
+							println("Chosen new grammar file "+currentGrammarFile);
+
+							buttons[i].colorTo(0, 255, 255, 255, 1);
+						}
+					}
+				}
+
+			}
+
+		}
 
 	}
+
+
 
     /**
      * text search of Freesound.org through the API which then sets up the playlist and player start
@@ -144,7 +198,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 
 
 		Set<String> fields = new HashSet<>(Arrays.asList("id", "url", "previews", "tags", "duration"));
-		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-23 TO -8]" );
+		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-23 TO 6]" );
 		SearchFilter _filter2 = new SearchFilter("duration", "[1 TO "+maxDuration+"]" );
 
 
@@ -292,18 +346,42 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 
 		drawDecorativeBackground( 15, body.length + generationCounter);
 
-		setFont(H1);
+
+		_fonts.setH1();
 		text(title, width/2, lineHeight);
 
-		setFont(TINY);
+
+		_fonts.setTINY();
 		text((savedFlag ? ("saved " + latestTimeStamp) : latestTimeStamp), width / 2, lineHeight*2);
 
-		setFont(P);
+		_fonts.setP();
+
+		if (currentGrammarFile.equals("haikuGrammar.json")) _fonts.setTOKEN();
+
 		for (int j = 0; j < body.length; j++) {
 			text(body[j], width/2, (height/4) + j * lineHeight);
 		}
 	}
+	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight, int FONT) {
 
+		drawDecorativeBackground( 15, body.length + generationCounter);
+
+		_fonts.setH1();
+		text(title, width/2, _fonts.H1+2);
+
+		_fonts.setTINY();
+		text((savedFlag ? ("saved " + latestTimeStamp) : latestTimeStamp), width / 2, lineHeight*2);
+
+		_fonts.setP();
+
+		if (currentGrammarFile.equals("haikuGrammar.json")) _fonts.setTOKEN();
+
+		for (int j = 0; j < body.length; j++) {
+			text(body[j], width/2, (height/5) + j * lineHeight);
+		}
+
+
+	}
     private void sonifyGeneratedText () throws InterruptedException {
 
         wordsToSonify = grammar.currentExpansionReduced;
@@ -321,28 +399,9 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 
     }
 
-	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight, int FONT) {
-
-		drawDecorativeBackground( 15, body.length + generationCounter);
-
-		setFont(H1);
-		text(title, width/2, H1+2);
-
-		setFont(TINY);
-		text((savedFlag ? ("saved " + latestTimeStamp) : latestTimeStamp), width / 2, lineHeight*2);
-
-		setFont(FONT);
-		for (int j = 0; j < body.length; j++) {
-			text(body[j], width/2, (height/5) + j * lineHeight);
-		}
 
 
-	}
 
-	private void setFont(int tag) {
-		textFont(fonts.get(tag));
-		textSize(tag);
-	}
 
 	private void drawDecorativeBackground(int backgroundGrey, int numberOfLines) {
 
@@ -351,10 +410,13 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 		if (numberOfLines > 1) {
 			for (int i = 1; i < numberOfLines * 10; i++) {
 
-				stroke(i+30, 80);
+				stroke(1f, i+(60 * (noise(i * 0.1f))), i+5f, 80f);
 				strokeWeight(random(i));
 				line(-50, (noise(i * 0.5f) * (height * map(i, 1, numberOfLines, 0.2f, 1))) - 200,
 						width + 50, (noise(i * 0.501f) * (height * map(i, 1, numberOfLines, 0.2f, 1))) - 200);
+				strokeWeight(random(i));
+				line(-50, (noise(i * 0.45f) * (height * map(i, 1, numberOfLines, 0.2f, 1))) - 200,
+						width + 50, (noise(i * 0.551f) * (height * map(i, 1, numberOfLines, 0.2f, 1))) - 200);
 			}
 		}
 	}
@@ -376,7 +438,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 	}
 
 
-	displayGeneratedTextLayout(latestTitle, lines, 34, TOKEN);
+	displayGeneratedTextLayout(latestTitle, lines, 34, _fonts.TOKEN);
 }
 
 
@@ -396,6 +458,12 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 		if (key == ' ' ) {
 			expandGrammar();
 		}
+
+		if (key == 'g' || key =='G') {
+			generationCounter = 0;
+		}
+
+
 		if ( key == 's' || key == 'S') {
 
 			//try to save to disk, post status in window title
@@ -496,11 +564,11 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 			displayGeneratedTextLayout(
 					latestTitle + " (Reduced)",
 					grammar.arrangeTokensIntoLines(grammar.currentExpansionReduced, 6),
-					TOKEN+4,
-					TOKEN
+					_fonts.TOKEN+4,
+					_fonts.TOKEN
 			);
 		} else {
-			displayGeneratedTextLayout(latestTitle, lines, TOKEN+4);
+			displayGeneratedTextLayout(latestTitle, lines, _fonts.TOKEN+4);
 		}
 	}
 
