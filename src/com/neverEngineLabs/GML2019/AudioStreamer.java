@@ -19,6 +19,7 @@ import static processing.core.PApplet.println;
 public class AudioStreamer extends Thread  {
 
 
+    private  float _rate;
     IStreamNotify streamNotify;
     private int _id;
     private int _priority;
@@ -38,7 +39,7 @@ public class AudioStreamer extends Thread  {
         this.setName(url);
         streamNotify = main;
         _url = url;
-        _volume = 2;
+        _volume = 1;
         _soundClip = new AudioClip(_url);
         _priority = 1;
         _timer = new Timer();
@@ -49,7 +50,7 @@ public class AudioStreamer extends Thread  {
                 cancel();
             }
         };
-
+        _id = Thread.activeCount()+1;
         _timer = new Timer ();
         _timer.schedule(_callback, (long) (offset+0.5) * 500); //compensate for buffering by halving requested delay
     }
@@ -71,21 +72,31 @@ public class AudioStreamer extends Thread  {
         this.setName("AudioThread"+_id);
     }
 
+    public AudioStreamer(IStreamNotify main, String url, float offset, float rate) {
+        this(main, url,offset);
+        _rate = rate;
+    }
 
-    public void play() {
+
+    private void play() {
 
             println("Starting audio for \'" + _token + "\' from " + _url + " in thread "+_id);
 
         streamNotify.playbackStart(_url, _token);
 
-            //     idea to spatialise ... not really working
-            //     _soundClip.play(_volume, 0 , 1, map(_priority,0,15,-1,1), _priority );
 
-            _soundClip.play(_volume, 0, 1, map(_priority,0,15,0,1), _priority);
+
+        // can only change rate if playing from disk
+           if (_url.contains("file:")) {
+               _soundClip.play(_volume, 0, _rate, 0.5, _priority);
+           } else {
+               _soundClip.play(_volume, 0, 1, 0.5, _priority);
+           }
 
         while (_soundClip.isPlaying())
         { streamNotify.playbackStatus(_token+" playing");}
         streamNotify.playbackStatus(_token+" stopped");
+
         }
 
 }

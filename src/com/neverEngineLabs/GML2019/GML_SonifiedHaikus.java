@@ -29,16 +29,15 @@ import com.sonoport.freesound.query.search.SortOrder;
 import com.sonoport.freesound.query.search.TextSearch;
 import com.sonoport.freesound.response.Response;
 import processing.core.PApplet;
-import processing.core.PGraphics;
 import processing.data.StringList;
 import rita.RiTa;
 import rita.RiText;
 
 
 import java.io.File;
-import java.net.MalformedURLException;
 import java.util.*;
 
+import static com.neverEngineLabs.GML2019.FileIOHelpers.localAudioFile;
 
 
 public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
@@ -64,7 +63,11 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 	public String [] buttonLabels;
 	private boolean displayingInfo = false;
 	private boolean displayingReduced = false;
-public File clickSound;
+
+	File clickSound = new File ("data/sounds/click.wav"),
+		sonifyGoSound = new File ("data/sounds/sonifyGo.wav"),
+		noGoSound = new File ("data/sounds/noGo.wav");
+
 	private RiText [] buttons;
 
 	/**
@@ -120,21 +123,24 @@ public File clickSound;
 			String fn = grammarFiles[i];
 			buttonLabels [i] = grammar.toTitleCase( fn.toLowerCase().substring(0, fn.indexOf(".json") ));
 		}
-
-		clickSound = new File ("data/sounds/click.mp3");
-
-		try {
+				try {
 			String [] greet = {"welcome", "hello", "greeting", "hola", "hi", "greet", "welcoming"};
 			freeSoundTextSearchThenPlay(greet[RiTa.random(greet.length)], 3);
+					setTitleBar(latestTitle + grammar.getLatestTimeStamp());
 		} catch ( Exception e) {
+					new AudioStreamer  (this, localAudioFile(clickSound), 1f);
+					new AudioStreamer  (this, localAudioFile(clickSound), 1.5f, 0.9f);
+					new AudioStreamer  (this, localAudioFile(clickSound), 2.0f, 0.5f);
+
+
 			e.printStackTrace();
-			setTitleBar( "> PLEASE CHECK YOUR INTERNET CONNECTION <");
-			fill(255,10,10);
-			_fonts.setStyle(H1);
-			text("PLEASE CHECK YOUR INTERNET CONNECTION", width/4, height / 2);
-			fill(250);
+			setTitleBar( ">> PLEASE CHECK YOUR INTERNET CONNECTION <<");
+			fill(200,10,0);
+			String warning = ">> PLEASE CHECK YOUR INTERNET CONNECTION <<";
+			text(warning, width - (textWidth(warning)), height-60);
 		}
-		setTitleBar(latestTitle + grammar.getLatestTimeStamp());
+
+
 
 		//initialise grammar select UI
 		RiText.defaultFont(_fonts.getFont(P));
@@ -144,8 +150,6 @@ public File clickSound;
 			buttons[i].boundingFill(30);
 			buttons[i].text(buttonLabels [i]);
 		}
-
-
 	}
 
 
@@ -179,11 +183,7 @@ public File clickSound;
 							clickCount++;
 							currentGrammarFile = grammarFiles[i];
 
-							try {
-								AudioStreamer click = new AudioStreamer(  this, clickSound.toURI().toURL().toString(),0.1f);
-							} catch (MalformedURLException e) {
-								e.printStackTrace();
-							}
+							new AudioStreamer(  this, localAudioFile(clickSound),0.1f, 1.1f).start();
 							grammar.loadFrom("data/grammarFiles/"+currentGrammarFile);
 
 							println("Chosen new grammar file "+currentGrammarFile);
@@ -201,7 +201,7 @@ public File clickSound;
 
 
 
-    /**
+	/**
      * text search of Freesound.org through the API which then sets up the playlist and player start
      * plus a bunch of overloads
 	 * TODO: Encapsulate FreeSound processing
@@ -400,7 +400,8 @@ public File clickSound;
 	}
     private void sonifyGeneratedText () throws InterruptedException {
 
-        wordsToSonify = grammar.currentExpansionReduced;
+		wordsToSonify = grammar.currentExpansionReduced;
+
          if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
 		setTitleBar("Loading audio...");
 		//15 voices max?
@@ -473,6 +474,8 @@ public File clickSound;
 	public void keyPressed() {
 		if (key == ' ' ) {
 			expandGrammar();
+			new AudioStreamer  (this, localAudioFile(sonifyGoSound), 0.1f, 1f).start();
+
 		}
 
 		if (key == 'g' || key =='G') {
@@ -602,6 +605,7 @@ public File clickSound;
 
 
 	public void playbackStart(String url, String token) {
+		if (!token.isEmpty())
 		setTitleBar("Sonifying \""+token+"\"");
 	}
 

@@ -2,6 +2,7 @@ package com.neverEngineLabs.GML2019;
 
 import processing.core.PApplet;
 import java.io.File;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 
 
@@ -92,6 +93,17 @@ public class FileIOHelpers extends PApplet
     public File getPathToDesktopFolder() {
 
         return new File(System.getProperty("user.home") + "/Desktop");
+    }
+
+
+    public static String localAudioFile(File audioFile) {
+        String result = "200";
+        try {
+            result = audioFile.toURI().toURL().toString();
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        return result;
     }
 
     /**
