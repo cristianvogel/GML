@@ -2,6 +2,8 @@
 
 ### This project has now become a token generator for 'text sonification' through FreeSound API
 
+### The documentation below, is for previous text generatin only project, new documentation for the sonification version will come soon....
+
 
 A token based score generator which uses context-free grammars and (optional) word lists to generate text scores. By working with text as symbolic data for input and output, a score can be assigned meaning through interpretation by human performers and/or software agents.
 
