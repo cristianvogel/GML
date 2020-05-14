@@ -385,12 +385,6 @@ public class GrammarGML {
 		return currentExpansionReduced;
 	}
 
-	/** returns a random rhyming word
-	 * @param word word to rhyme
-	 */
-	public String rhyme(String word) {
-		return (String) randomItem(RiTa.similarBySound(word));
-	}
 
 	/** combines array of individual tokens into better lines layout
 	 * @param numberPerLine number of words to consider as one line
@@ -572,9 +566,21 @@ public class GrammarGML {
 		return a + ' ' + prep + ' ' + b;
 	}
 
+	/** returns a random rhyming word
+	 * @param word word to rhyme
+	 */
+	public String rhyme(String word) {
+		return (String) randomItem(RiTa.similarBySound(word));
+	}
+
+
 	/**
 	 * set a choice to a variable in the grammar
 	 * and recall it later in the text when needed
+	 *
+	 * RiTa will currently not process recursive execution
+	 * [WARN] Unable to parse recursive exec: `set(firstWord, `randomNoun()`...
+	 *
 	 * Example:
 	 * `set(surface,<hardSurfaces>);'
 	 * `get(surface);`
@@ -600,6 +606,15 @@ public class GrammarGML {
 		return value;
 	}
 
+
+	String getRhyme(String key) {
+		String value;
+		if (fixedChoices.containsKey(key)) {
+			value = rhyme(fixedChoices.get(key));
+		} else { value = key;}
+
+		return value;
+	}
 
 	/**
 	 * repeat the same terminal in the output separated by a comma
@@ -629,6 +644,26 @@ public class GrammarGML {
 			terminal = grammar.expandFrom(parentRule);
 		}
 		return terminal;
+	}
+
+	String randomWord( int syllableCount) {
+		return RiTa.randomWord(syllableCount);
+	}
+
+	String randomWord( ) {
+		return RiTa.randomWord();
+	}
+
+	String randomNoun() {
+		String [] posTags = { "nn" , "nns", "nnp"};
+
+	return RiTa.randomWord(posTags[RiTa.random(0,2)]);
+	}
+
+	String randomAdjective() {
+		String [] posTags = { "jj" , "jjr", "jjs"};
+
+		return RiTa.randomWord(posTags[RiTa.random(0,2)]);
 	}
 
 }

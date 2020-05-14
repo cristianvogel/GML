@@ -44,14 +44,14 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 	//constructor with field assignments
 	private GrammarGML grammar = new GrammarGML(this);
 	private String[] lines = {
-	        "\n\nPress 'G' to choose a grammar file...\n\n" +
+	        "Press 'G' to choose a grammar file...\n\n" +
             "then press SPACEBAR to generate a new text...\n\n" +
             "or press 'S' to save the text to disk...\n\n" +
             "or press 'P' to play the text as sound." };
 	private String[] linesAlt ;
 	private String [] grammarFiles;
-	private String currentGrammarFile = "data/grammarFiles/haikuGrammar.json";
-	private String latestTitle = "Welcome to Sonified Haiku Generator!";
+	private String currentGrammarFile = "data/grammarFiles/VerifiableNews.json";
+	private String latestTitle = "Welcome to WordSound!";
 	private String latestTimeStamp = "Current grammar: "+currentGrammarFile;
 	private Boolean savedFlag = false;
 	private int generationCounter = 1;
@@ -92,7 +92,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 
 	public void settings() {
 
-		size(1000, (int) (displayHeight * 0.6) );
+		size(1000, (int) (displayHeight * 0.75) );
 		pixelDensity(displayDensity());
 
 	}
@@ -106,6 +106,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 
 		_fonts.setP();
 		textAlign(CENTER, CENTER);
+		rectMode(CORNERS);
 
 		displayGeneratedTextLayout(latestTitle, lines, 28);
 
@@ -125,7 +126,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 		}
 				try {
 			String [] greet = {"welcome", "hello", "greeting", "hola", "hi", "greet", "welcoming"};
-			freeSoundTextSearchThenPlay(greet[RiTa.random(greet.length)], 3);
+			freeSoundTextSearchThenPlay(greet[RiTa.random(greet.length)], 5);
 					setTitleBar(latestTitle + grammar.getLatestTimeStamp());
 		} catch ( Exception e) {
 					new AudioStreamer  (this, localAudioFile(clickSound), 1f);
@@ -193,7 +194,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 					}
 				}
 
-			} else { cursor(ARROW);}
+			} else { cursor(ARROW); generationCounter=0;}
 
 		}
 
@@ -372,10 +373,12 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 
 		_fonts.setP();
 
-		if (currentGrammarFile.equals("haikuGrammar.json")) _fonts.setTOKEN();
+		//if (currentGrammarFile.equals("haikuGrammar.json")) _fonts.setTOKEN();
 
-		for (int j = 0; j < body.length; j++) {
-			text(body[j], width/2, (height/4) + j * lineHeight);
+        if (body.length < 6) _fonts.setTOKEN();
+
+    for (int j = 0; j < body.length; j++) {
+			text(body[j], width/6, (height/4) + j * lineHeight, width - (width/6), height-lineHeight);
 		}
 	}
 	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight, int FONT) {
@@ -390,10 +393,12 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 
 		_fonts.setP();
 
-		if (currentGrammarFile.equals("haikuGrammar.json")) _fonts.setTOKEN();
+		//if (currentGrammarFile.equals("haikuGrammar.json")) _fonts.setTOKEN();
+
+        if (body.length < 6) _fonts.setTOKEN();
 
 		for (int j = 0; j < body.length; j++) {
-			text(body[j], width/2, (height/5) + j * lineHeight);
+			text(body[j], width/6, (height/5) + j * lineHeight, width - (width/6), height-lineHeight);
 		}
 
 
@@ -409,9 +414,9 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 		for (int i = 0; i < wordsToSonify.length; i++)
 		{
 			if (i > 0)
-				{freeSoundTextSearchThenPlay(wordsToSonify[i], i * 3, 15, i % 15, i);}
+				{freeSoundTextSearchThenPlay(wordsToSonify[i], i * 3, 45, i % 15, i);}
 			else // make first select potentially play for longer duration and start straightaway
-				{freeSoundTextSearchThenPlay(wordsToSonify[i], 0.5f, 35, 1, i);}
+				{freeSoundTextSearchThenPlay(wordsToSonify[i], 0.5f, 45, 1, i);}
 		}
 
     }
@@ -474,7 +479,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 	public void keyPressed() {
 		if (key == ' ' ) {
 			expandGrammar();
-			new AudioStreamer  (this, localAudioFile(sonifyGoSound), 0.1f, 1f).start();
+			//new AudioStreamer  (this, localAudioFile(sonifyGoSound), 0.1f, 1f).start();
 
 		}
 

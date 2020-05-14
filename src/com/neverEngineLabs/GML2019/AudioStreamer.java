@@ -39,7 +39,7 @@ public class AudioStreamer extends Thread  {
         this.setName(url);
         streamNotify = main;
         _url = url;
-        _volume = 1;
+        _volume = 0.8;
         _soundClip = new AudioClip(_url);
         _priority = 1;
         _timer = new Timer();
@@ -53,6 +53,7 @@ public class AudioStreamer extends Thread  {
         _id = Thread.activeCount()+1;
         _timer = new Timer ();
         _timer.schedule(_callback, (long) (offset+0.5) * 500); //compensate for buffering by halving requested delay
+      //  _timer.schedule(_callback, (long) (offset+0.5) );
     }
 
     public AudioStreamer(IStreamNotify main, String url, float offset, int priority) {
