@@ -95,8 +95,10 @@ public class AudioStreamer extends Thread {
 
         if (_soundClip.isPlaying()) {
             streamNotify.playbackStatus(_token + " playing");
+            streamNotify.setConsoleStatus(_token + " playing");
         } else {
             streamNotify.playbackStatus(_token + " stopped");
+            streamNotify.setConsoleStatus(_token + " stopped");
         }
 
     }

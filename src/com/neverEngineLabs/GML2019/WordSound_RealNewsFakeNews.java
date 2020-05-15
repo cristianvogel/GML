@@ -175,7 +175,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 		//todo: improve UI Classes and Methods
 		drawDecorativeBackground( 15, 10);
 		image(layout,0,0);
-		console(consoleStatus);
+		console();
 
 		if (generationCounter<1) {
 
@@ -623,7 +623,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 		}
 	}
 
-	public void console(String s) {
+	public void console() {
 		_fonts.setTINY();
 		fill(128);
 		text(consoleStatus, width/3, height-100);
