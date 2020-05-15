@@ -591,7 +591,7 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 					grammar.arrangeTokensIntoLines(grammar.currentExpansionReduced, 6),
 					_fonts.TOKEN+4,
 					_fonts.TOKEN
-			);
+			)
 		} else {
 			displayGeneratedTextLayout(latestTitle, lines, _fonts.TOKEN+4);
 		}
@@ -614,6 +614,10 @@ public class GML_SonifiedHaikus extends PApplet implements IStreamNotify {
 		setTitleBar("Sonifying \""+token+"\"");
 	}
 
+	@Override
+	public void console(String msg) {
+
+	}
 
 	public void playbackStatus(String threadStatus) {
 		if (wordsToSonify != null) {

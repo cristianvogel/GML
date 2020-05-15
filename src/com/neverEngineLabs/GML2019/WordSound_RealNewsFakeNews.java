@@ -47,21 +47,23 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 	private GrammarGML grammar = new GrammarGML(this);
 	private String[] lines = {
 	        "Press 'G' to select text generator rules...\n\n" +
-            "Press SPACEBAR to generate probabilistic text...\n" + "or..\n"+
-            "Press 'P' to interpret the text with " };
+            "Press SPACEBAR to generate text...\n" + "or..\n"+
+            "Press 'P' to listen to sonify the text... \n" +
+			"Sounds will be retrieved from the FreeSound database."};
 	private String[] linesAlt ;
 	private String [] grammarFiles;
 	private String currentGrammarFile = "data/grammarFiles/VerifiableNews.json";
-	private String latestTitle = "Welcome to WordSound!";
+	private String latestTitle = "Welcome to WordSound";
 	private String latestTimeStamp = "Current grammar: "+currentGrammarFile;
 	private Boolean savedFlag = false;
+	private Boolean  isPlaying = false;
 	private int generationCounter = 1;
 
 	private Type _fonts = new Type() ;
 	//public  int  H1=36, P=20, TINY=12, TOKEN=24;
 
 	public RiText [] _picked;
-	public RiText h1, p, tiny;
+
 	public String [] buttonLabels;
 	private boolean displayingInfo = false;
 	private boolean displayingReduced = false;
@@ -71,6 +73,8 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 		noGoSound = new File ("data/sounds/noGo.wav");
 
 	private RiText [] buttons;
+
+	public String consoleStatus = "";
 
 	/**
 	 * FreeSound.org
@@ -88,8 +92,9 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 	private int clickCount = 0;
 	private float _startTime;
 	private Timer _localStatusTimer;
-	private PGraphics offscreenBuffer;
-	private PImage layout;
+	public PGraphics offscreenBuffer;
+	public PImage layout;
+	public PImage consoleDisplay;
 
 	////////////////////////
 
@@ -105,6 +110,8 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 	    RiTa.start(this);
 		_fonts.init(this.g);
+		consoleDisplay = new PImage(0,0);
+
 
 	    grammar.loadFrom(currentGrammarFile);
 
@@ -129,9 +136,10 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 			buttonLabels [i] = grammar.toTitleCase( fn.toLowerCase().substring(0, fn.indexOf(".json") ));
 		}
 				try {
-			String [] greet = {"welcome", "hello", "greeting", "hola", "hi", "greet", "welcoming", "hallo", "salutation", "hej"};
-			freeSoundTextSearchThenPlay(greet[RiTa.random(greet.length)], 5);
+		//	String [] greet = {"welcome", "hello", "greeting", "hola", "hi", "greet", "welcoming", "hallo", "salutation", "hej"};
+		//	freeSoundTextSearchThenPlay(greet[RiTa.random(greet.length)], 5);
 					setTitleBar(latestTitle + grammar.getLatestTimeStamp());
+					console(latestTitle + grammar.getLatestTimeStamp());
 		} catch ( Exception e) {
 					new AudioStreamer  (this, localAudioFile(clickSound), 1f);
 					new AudioStreamer  (this, localAudioFile(clickSound), 1.5f, 0.9f);
@@ -155,6 +163,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 			buttons[i].boundingFill(30);
 			buttons[i].text(buttonLabels [i]);
 		}
+
 	}
 
 
@@ -163,10 +172,10 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
      */
 	public void draw() {
 
-		//todo: make UI Classes and Methods
-
-		drawDecorativeBackground(5, 10);
+		//todo: improve UI Classes and Methods
+		drawDecorativeBackground( 15, 10);
 		image(layout,0,0);
+		console(consoleStatus);
 
 		if (generationCounter<1) {
 
@@ -193,9 +202,8 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 							new AudioStreamer(  this, localAudioFile(clickSound),0.1f, 1.1f).start();
 							grammar.loadFrom("data/grammarFiles/"+currentGrammarFile);
 
-							println("Chosen new grammar file "+currentGrammarFile);
-
-
+							console("Chosen new grammar file, expanding "+currentGrammarFile);
+							expandGrammar();
 						}
 					}
 				}
@@ -203,8 +211,8 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 			} else {
 				cursor(ARROW); generationCounter=0;
 			}
-		}
 
+		}
 	}
 
 
@@ -227,6 +235,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 
 		println("Searching for \""+searchString+"\"");
+		console("Searching for \""+searchString+"\"");
 		final TextSearch textSearch =
                 new TextSearch()
                         .searchString(searchString)
@@ -289,13 +298,13 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 				selectedResult = _taggedHits.get(RiTa.random(0, _taggedHits.size()));
 			}
 
-			println("Selecting from"+_taggedHits.size()+" tags");
+			console ("Selecting from"+_taggedHits.size()+" tags");
 		} else {
 			for (int i = 0; i < 3 ; i++) {
 				// do random pick three times
 				selectedResult = RiTa.random(0, _bounds);
 			}
-			println("Not enough tags, selecting at random...");
+			console ("Not enough tags, selecting at random...");
 			}
 
 		JsonElement duration = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("duration");
@@ -308,17 +317,15 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 
 		float shortestDuration = min(offset, previousDuration);
-        println ("Result " + selectedResult + " out of "+ results.getAsJsonArray().size() + " results for "+searchString+" with file duration: "+ duration.toString() + " start offset:" + shortestDuration) ;
+		console ("Result " + selectedResult + " out of "+ results.getAsJsonArray().size() + " results for "+searchString+" with file duration: "+ duration.toString() + " start offset:" + shortestDuration) ;
 
 		// background audio runnable
 		AudioStreamer _audioStreamer = new AudioStreamer(this, _url, shortestDuration, priority,searchString, id);
-		//println("Threads:" + Thread.activeCount());
+		println("Threads:" + Thread.activeCount());
 
         _audioStreamer.start();
 		previousDuration = duration.getAsFloat();
 	}
-
-
 
 	private void freeSoundTextSearchThenPlay(String token, float maxDuration) {
 		try {
@@ -335,8 +342,6 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 			e.printStackTrace();
 		}
 	}
-
-
 
     /**
      * the following code will retrieve a SoundResponse from a integer unique ID
@@ -365,19 +370,15 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
         return s1;
     }
 
-
-
-
 	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight) {
 
- //		drawDecorativeBackground( 15, body.length + generationCounter);
 		offscreenBuffer = createGraphics(width, height);
 		offscreenBuffer.rectMode(CORNERS);
 		offscreenBuffer.beginDraw();
 
 			offscreenBuffer.textFont(_fonts.getFont(H1));
 			offscreenBuffer.fill(250);
-			offscreenBuffer.text(title, width/2, lineHeight);
+			offscreenBuffer.text(title, width/3, lineHeight);
 
 
 			offscreenBuffer.textFont(_fonts.getFont(TINY));
@@ -385,10 +386,10 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 			offscreenBuffer.textFont(_fonts.getFont(P));
 
-			if (body.length < 6) offscreenBuffer.textFont(_fonts.getFont(P));  // getFont(TOKEN) was causing null pointer!
+			if (body.length < 6) offscreenBuffer.textFont(_fonts.getFont(P));
 
 			for (int j = 0; j < body.length; j++) {
-				offscreenBuffer.text(body[j], width/6, (height/4) + j * lineHeight, width - (width/6), height-lineHeight);
+				offscreenBuffer.text(body[j], width/6, (height/4) + j * lineHeight, width - (width/4), height-lineHeight);
 			}
 		offscreenBuffer.endDraw();
 		layout = offscreenBuffer.get();
@@ -396,14 +397,13 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight, int FONT) {
 
-	//	drawDecorativeBackground( 15, body.length + generationCounter);
 		offscreenBuffer = createGraphics(width, height);
 		offscreenBuffer.rectMode(CORNERS);
 		offscreenBuffer.beginDraw();
 			offscreenBuffer.fill(250);
 			offscreenBuffer.textFont(_fonts.getFont(H1));
 
-			offscreenBuffer.text(title, width/2, H1+2);
+			offscreenBuffer.text(title, width/3, H1+2);
 
 			offscreenBuffer.textFont(_fonts.getFont(TINY));
 
@@ -413,11 +413,10 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 			if (body.length < 6) offscreenBuffer.textFont(_fonts.getFont(P));
 
 			for (int j = 0; j < body.length; j++) {
-				offscreenBuffer.text(body[j], width/6, (height/5) + j * lineHeight, width - (width/6), height-lineHeight);
+				offscreenBuffer.text(body[j], width/6, (height/5) + j * lineHeight, width - (width/4), height-lineHeight);
 			}
 		offscreenBuffer.endDraw();
 		layout = offscreenBuffer.get();
-
 	}
 
     private void sonifyGeneratedText () throws InterruptedException {
@@ -426,6 +425,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
          if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
 		setTitleBar("Loading audio...");
+         console("Loading audio streams...");
 		//15 voices max?
 
 		for (int i = 0; i < wordsToSonify.length; i++)
@@ -439,24 +439,25 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
     }
 
 
-
-
-
 	private void drawDecorativeBackground(int backgroundGrey, int numberOfLines) {
 
-		background(backgroundGrey);
-		noiseDetail(8, 0.8f);
-		if (numberOfLines > 1) {
-			for (int i = 1; i < numberOfLines * 10; i++) {
+    	pushMatrix();
+			background(backgroundGrey,10);
+			noiseDetail(8, 0.8f);
+			float drift = frameCount * (0.0001f * generationCounter);
+			if (numberOfLines > 1) {
+				for (int i = 1; i < numberOfLines * 10; i++) {
 
-				stroke(1f, i+(60 * (noise(i * 0.1f))), i+5f, 80f);
-				strokeWeight(noise(i, frameCount*0.0001f));
-				line(-50, (noise(i * 0.5f) * (height * map(i, 1, numberOfLines, 0.2f, 1))) - 200,
-						width + 50, (noise(i * 0.501f) * (height * map(i, 1, numberOfLines, 0.2f, 1))) - 200);
-				strokeWeight(noise(i, frameCount*0.0001f));
-				line(-50, (noise(i * 0.45f) * (height * map(i, 1, numberOfLines, 0.2f, 1))) - 200,
-						width + 50, (noise(i * 0.551f) * (height * map(i, 1, numberOfLines, 0.2f, 1))) - 200);
-			}
+					stroke(1f, i+(60 * (noise(i * 0.1f))), i+5f, 80f);
+					strokeWeight(noise(i, frameCount*0.001f));
+					line(-50, (noise(i * 0.5f) * (height * map(i, 1, numberOfLines, 0.2f + drift, 1))) - 200,
+							width + 50, (noise(i * 0.501f) * (height * map(i, 1, numberOfLines, 0.2f - drift, 1))) - 200);
+					strokeWeight(noise(i, drift));
+					line(-50, (drift + noise(i * 0.45f) * (height * map(i, 1, numberOfLines, 0.2f, 1))) - 200,
+							width + 50, (noise(i * 0.551f) * (height * map(i, 1, numberOfLines, 0.2f, 1))) - 200);
+				}
+			if (isPlaying) {rotate(drift * 10);}
+		popMatrix();
 		}
 	}
 
@@ -598,6 +599,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 	public void setTitleBar(String s) {
 	    surface.setTitle(s);
+	    console(s);
 	}
 
 	public void displayReduced() {
@@ -615,35 +617,38 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 	}
 
 
-/// Java main
-
-	public static void main(String[] args) {
-
-
-		System.out.println("Running " + WordSound_RealNewsFakeNews.class.getName());
-		String[] options = {  WordSound_RealNewsFakeNews.class.getName() };
-		PApplet.main(options);
-	}
-
-
 	public void playbackStart(String url, String token) {
 		if (!token.isEmpty()) {
 			setTitleBar("Sonifying \"" + token + "\"");
-			highlight(token);
 		}
 	}
 
-	public void highlight(String s) {
-
-
+	public void console(String s) {
+		_fonts.setTINY();
+		fill(128);
+		text(s, width/3, height-100);
+		consoleStatus = s;
 	}
 
 
 	public void playbackStatus(String threadStatus) {
 		if (wordsToSonify != null) {
+
 		if ((wordsToSonify[wordsToSonify.length-1] + " stopped").equals(threadStatus)) {
+			isPlaying = false;
 			setTitleBar(latestTitle+" was sonified!");
-			}
+			console(latestTitle+" was sonified!");
+			} else {isPlaying = true;}
 		}
+	}
+
+
+/// Java main
+
+	public static void main(String[] args) {
+
+		System.out.println("Running " + WordSound_RealNewsFakeNews.class.getName());
+		String[] options = {  WordSound_RealNewsFakeNews.class.getName() };
+		PApplet.main(options);
 	}
 }

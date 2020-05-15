@@ -10,7 +10,7 @@ import java.util.Map;
 public class Type extends PApplet {
 
     //font sizes
-    public static int  H1=36, P=36, TINY=16, TOKEN=36;
+    public static int  H1=36, P=28, TINY=16, TOKEN=24;
     private Map<Integer, PFont> fonts = new HashMap<>();
 
 
