@@ -84,7 +84,7 @@ public class AudioStreamer extends Thread {
         println("Starting audio for \'" + _token + "\' from " + _url + " in thread " + _id);
 
         streamNotify.playbackStart(_url, _token);
-        streamNotify.console("Starting audio for \'" + _token + "\' from " + _url + " in thread " + _id);
+        streamNotify.setConsoleStatus("Starting audio for \'" + _token + "\' from " + _url + " in thread " + _id);
 
         // can only change rate if playing from disk
         if (_url.contains("file:")) {

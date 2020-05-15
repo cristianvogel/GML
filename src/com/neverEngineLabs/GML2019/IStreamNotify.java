@@ -3,6 +3,5 @@ package com.neverEngineLabs.GML2019;
 public interface IStreamNotify {
     void playbackStart(String url, String token);
     void playbackStatus(String thread);
-    void console(String msg);
-    void draw();
+    void setConsoleStatus(String msg);
 }

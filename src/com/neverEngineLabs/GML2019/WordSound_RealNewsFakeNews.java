@@ -139,7 +139,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 		//	String [] greet = {"welcome", "hello", "greeting", "hola", "hi", "greet", "welcoming", "hallo", "salutation", "hej"};
 		//	freeSoundTextSearchThenPlay(greet[RiTa.random(greet.length)], 5);
 					setTitleBar(latestTitle + grammar.getLatestTimeStamp());
-					console(latestTitle + grammar.getLatestTimeStamp());
+					setConsoleStatus(latestTitle + grammar.getLatestTimeStamp());
 		} catch ( Exception e) {
 					new AudioStreamer  (this, localAudioFile(clickSound), 1f);
 					new AudioStreamer  (this, localAudioFile(clickSound), 1.5f, 0.9f);
@@ -202,7 +202,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 							new AudioStreamer(  this, localAudioFile(clickSound),0.1f, 1.1f).start();
 							grammar.loadFrom("data/grammarFiles/"+currentGrammarFile);
 
-							console("Chosen new grammar file, expanding "+currentGrammarFile);
+							setConsoleStatus("Chosen new grammar file, expanding "+currentGrammarFile);
 							expandGrammar();
 						}
 					}
@@ -235,7 +235,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 
 		println("Searching for \""+searchString+"\"");
-		console("Searching for \""+searchString+"\"");
+		setConsoleStatus("Searching for \""+searchString+"\"");
 		final TextSearch textSearch =
                 new TextSearch()
                         .searchString(searchString)
@@ -298,13 +298,13 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 				selectedResult = _taggedHits.get(RiTa.random(0, _taggedHits.size()));
 			}
 
-			console ("Selecting from"+_taggedHits.size()+" tags");
+			setConsoleStatus ("Selecting from"+_taggedHits.size()+" tags");
 		} else {
 			for (int i = 0; i < 3 ; i++) {
 				// do random pick three times
 				selectedResult = RiTa.random(0, _bounds);
 			}
-			console ("Not enough tags, selecting at random...");
+			setConsoleStatus ("Not enough tags, selecting at random...");
 			}
 
 		JsonElement duration = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("duration");
@@ -317,7 +317,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 
 		float shortestDuration = min(offset, previousDuration);
-		console ("Result " + selectedResult + " out of "+ results.getAsJsonArray().size() + " results for "+searchString+" with file duration: "+ duration.toString() + " start offset:" + shortestDuration) ;
+		setConsoleStatus ("Result " + selectedResult + " out of "+ results.getAsJsonArray().size() + " results for "+searchString+" with file duration: "+ duration.toString() + " start offset:" + shortestDuration) ;
 
 		// background audio runnable
 		AudioStreamer _audioStreamer = new AudioStreamer(this, _url, shortestDuration, priority,searchString, id);
@@ -425,7 +425,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
          if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
 		setTitleBar("Loading audio...");
-         console("Loading audio streams...");
+         setConsoleStatus("Loading audio streams...");
 		//15 voices max?
 
 		for (int i = 0; i < wordsToSonify.length; i++)
@@ -599,7 +599,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 	public void setTitleBar(String s) {
 	    surface.setTitle(s);
-	    console(s);
+	    setConsoleStatus(s);
 	}
 
 	public void displayReduced() {
@@ -626,10 +626,13 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 	public void console(String s) {
 		_fonts.setTINY();
 		fill(128);
-		text(s, width/3, height-100);
-		consoleStatus = s;
+		text(consoleStatus, width/3, height-100);
 	}
 
+	@Override
+	public void setConsoleStatus(String msg) {
+		consoleStatus = msg;
+	}
 
 	public void playbackStatus(String threadStatus) {
 		if (wordsToSonify != null) {
@@ -637,7 +640,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 		if ((wordsToSonify[wordsToSonify.length-1] + " stopped").equals(threadStatus)) {
 			isPlaying = false;
 			setTitleBar(latestTitle+" was sonified!");
-			console(latestTitle+" was sonified!");
+			setConsoleStatus(latestTitle+" was sonified!");
 			} else {isPlaying = true;}
 		}
 	}
