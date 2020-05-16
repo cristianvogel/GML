@@ -20,14 +20,8 @@ http://www.rednoise.org/rita/
 package com.neverEngineLabs.GML2019;
 
 
-import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.sonoport.freesound.FreesoundClient;
-import com.sonoport.freesound.FreesoundClientException;
-import com.sonoport.freesound.query.search.SearchFilter;
-import com.sonoport.freesound.query.search.SortOrder;
-import com.sonoport.freesound.query.search.TextSearch;
-import com.sonoport.freesound.response.Response;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 import processing.core.PImage;
@@ -35,6 +29,7 @@ import processing.data.StringList;
 import rita.RiTa;
 import rita.RiText;
 
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.io.File;
 import java.util.*;
 
@@ -42,7 +37,7 @@ import static com.neverEngineLabs.GML2019.FileIOHelpers.localAudioFile;
 import static com.neverEngineLabs.GML2019.Type.*;
 
 
-public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify {
+public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify, ISearchNotify {
 	//constructor with field assignments
 	private GrammarGML grammar = new GrammarGML(this);
 	private String[] lines = {
@@ -56,7 +51,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 	private String latestTitle = "Welcome to WordSound";
 	private String latestTimeStamp = "Current grammar: "+currentGrammarFile;
 	private Boolean savedFlag = false;
-	private Boolean  isPlaying = false;
+
 	private int generationCounter = 1;
 
 	private Type _fonts = new Type() ;
@@ -89,12 +84,18 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 	private float previousDuration = 0.1f;
 	private String[] wordsToSonify;
 
+	//other stuff
 	private int clickCount = 0;
 	private float _startTime;
 	private Timer _localStatusTimer;
 	public PGraphics offscreenBuffer;
 	public PImage layout;
 	public PImage consoleDisplay;
+
+	//thread related
+	ConcurrentLinkedDeque<JsonElement> searchResults = new ConcurrentLinkedDeque<>();
+	Thread searchThreads[] = new Thread[100];
+	private boolean streaming;
 
 	////////////////////////
 
@@ -107,6 +108,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 	}
 
 	public void setup() {
+
 
 	    RiTa.start(this);
 		_fonts.init(this.g);
@@ -136,8 +138,8 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 			buttonLabels [i] = grammar.toTitleCase( fn.toLowerCase().substring(0, fn.indexOf(".json") ));
 		}
 				try {
-		//	String [] greet = {"welcome", "hello", "greeting", "hola", "hi", "greet", "welcoming", "hallo", "salutation", "hej"};
-		//	freeSoundTextSearchThenPlay(greet[RiTa.random(greet.length)], 5);
+			String [] greet = {"welcome", "hello", "greeting", "hola", "hi", "greet", "welcoming", "hallo", "salutation", "hej"};
+			//freeSoundTextSearchAndPlay(greet[RiTa.random(greet.length)], 5);
 					setTitleBar(latestTitle + grammar.getLatestTimeStamp());
 					setConsoleStatus(latestTitle + grammar.getLatestTimeStamp());
 		} catch ( Exception e) {
@@ -166,16 +168,19 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 	}
 
-
-    /**
-     * Processing3 update method called every frame
-     */
 	public void draw() {
 
 		//todo: improve UI Classes and Methods
-		drawDecorativeBackground( 15, 10);
+
+		drawDecorativeBackground( 15, 10* ((searchResults.isEmpty()) ? 10 : searchResults.size() + 10));
 		image(layout,0,0);
 		console();
+
+		//audio streaming
+		if (streaming)
+		{
+			sonifyGeneratedText();
+		}
 
 		if (generationCounter<1) {
 
@@ -199,7 +204,8 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 							clickCount++;
 							currentGrammarFile = grammarFiles[i];
 
-							new AudioStreamer(  this, localAudioFile(clickSound),0.1f, 1.1f).start();
+							new AudioStreamer(  this, localAudioFile(clickSound),0.1f, 1.1f).play();
+
 							grammar.loadFrom("data/grammarFiles/"+currentGrammarFile);
 
 							setConsoleStatus("Chosen new grammar file, expanding "+currentGrammarFile);
@@ -226,150 +232,91 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
      * @param priority polyphony of 15 there can be a priority to voice offloading
      */
 
-	public void freeSoundTextSearchThenPlay(String searchString, float offset, float maxDuration, int priority, int id) throws InterruptedException {
+	public void freeSoundTextSearchAndPlay(String searchString, float offset, float maxDuration, int priority, int id) {
 
+		// run search threads
 
-		Set<String> fields = new HashSet<>(Arrays.asList("id", "url", "previews", "tags", "duration"));
-		SearchFilter _filter1 = new SearchFilter("ac_loudness", "[-23 TO 6]" );
-		SearchFilter _filter2 = new SearchFilter("duration", "[1 TO "+maxDuration+"]" );
-
-
-		println("Searching for \""+searchString+"\"");
-		setConsoleStatus("Searching for \""+searchString+"\"");
-		final TextSearch textSearch =
-                new TextSearch()
-                        .searchString(searchString)
-                        .sortOrder(SortOrder.CREATED_DESCENDING)
-                        .filter(_filter1).filter( _filter2).includeFields(fields)
-                        .pageSize(RiTa.random(50,150));
-
-		Response response = null;
-		try {
-			response = freesoundClient.executeQuery(textSearch);
-		} catch (FreesoundClientException e) {
-			e.printStackTrace();
-		}
-
-		int httpStatusCode = response.getResponseStatus();
-
-		if (httpStatusCode == 429) {
-			println("Http status code = " + httpStatusCode +": fail");
-			setTitleBar("HTTP Error 429: too many requests - please try again later");
-			return;
-		}
-
-		if (httpStatusCode == 400) {
-			println("Http status code = " + httpStatusCode +": fail");
-			setTitleBar("HTTP Error" + httpStatusCode);
-			return;
-		}
-
-
-		JsonElement results = new Gson().toJsonTree(response.getResults());
-		//this would get a String out
-		//String results = new Gson().toJson(response.getResults());
-
-		int _bounds = results.getAsJsonArray().size();
-		if (_bounds == 0) {println("Empty result, skipping.."); return; }
-
-		/**
-		 * Search for Tag hits and try to pick from all tagged hits
-		 * If no Tag matches, then the result probably
-		 * has the Token somewhere else in the description
-		 * so pick randomly from the results
-		 */
-
-		_taggedHits.clear();
-		int selectedResult = 0;
-
-		for (int i = 0; i < _bounds; i++)
-		{
-			JsonElement tags = results.getAsJsonArray().get(i).getAsJsonObject().get("tags");
-			if (tags.toString().contains(searchString)) {
-				_taggedHits.add(i);
-			}
-		}
-
-
-		// tags are not always abundant so try to pick from a set of at least 4 hits
-		if (_taggedHits.size() > 4) {
-			for (int i = 0; i < 3 ; i++) {
-				// do random pick three times
-				selectedResult = _taggedHits.get(RiTa.random(0, _taggedHits.size()));
+			if ( searchThreads[id] == null) {
+				AddTask task = new AddTask(this, searchResults, searchString, offset, maxDuration, priority, id);
+				searchThreads[id] = new Thread(task);
+				setConsoleStatus("Searching for sound " + searchString);
+				searchThreads[id].start();
 			}
 
-			setConsoleStatus ("Selecting from"+_taggedHits.size()+" tags");
-		} else {
-			for (int i = 0; i < 3 ; i++) {
-				// do random pick three times
-				selectedResult = RiTa.random(0, _bounds);
+
+		if ( searchResults.peekFirst() != null) {
+			JsonElement results = searchResults.pollFirst();
+			int _bounds = results.getAsJsonArray().size();
+			if (_bounds == 0) {println("Empty result, skipping.."); return; }
+
+			/**
+			 * Search for Tag hits and try to pick from all tagged hits
+			 * If no Tag matches, then the result probably
+			 * has the Token somewhere else in the description
+			 * so pick randomly from the results
+			 */
+			ArrayList<Integer>m_taggedHits = new ArrayList<>();
+			m_taggedHits.clear();
+			int selectedResult = 0;
+
+			for (int i = 0; i < _bounds; i++)
+			{
+				JsonElement tags = results.getAsJsonArray().get(i).getAsJsonObject().get("tags");
+				if (tags.toString().contains(searchString)) {
+					m_taggedHits.add(i);
+				}
 			}
-			setConsoleStatus ("Not enough tags, selecting at random...");
+
+			// tags are not always abundant so try to pick from a set of at least 4 hits
+			if (m_taggedHits.size() > 4) {
+				for (int i = 0; i < 3 ; i++) {
+					// do random pick three times
+					selectedResult = m_taggedHits.get(RiTa.random(0, m_taggedHits.size()));
+				}
+
+				println ("Selecting from"+ m_taggedHits.size()+" tags");
+			} else {
+				for (int i = 0; i < 10 ; i++) {
+					// do random pick a few times
+					selectedResult = RiTa.random(0, _bounds);
+				}
+				println ("Not enough tags, selecting at random...");
 			}
 
-		JsonElement duration = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("duration");
-		JsonElement url = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("url");
-		JsonElement previews = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("previews");
-		JsonElement mp3Hq = previews.getAsJsonObject().get("preview-hq-mp3");
+			JsonElement duration = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("duration");
+			JsonElement url = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("url");
+			JsonElement previews = results.getAsJsonArray().get(selectedResult).getAsJsonObject().get("previews");
+			JsonElement mp3Hq = previews.getAsJsonObject().get("preview-hq-mp3");
 
-		String _url = removeFirstAndLast(mp3Hq.toString()); //the GSON generated JSON primitives seem to come in with magic-quotes
+			String _url = removeFirstAndLast(mp3Hq.toString()); //the GSON generated JSON primitives seem to come in with magic-quotes
 
+			println ("Result " + selectedResult + " out of "+ results.getAsJsonArray().size() + " results for "+searchString+" with file duration: "+ duration.toString() + " duration:" + duration.getAsFloat()) ;
 
-
-		float shortestDuration = min(offset, previousDuration);
-		setConsoleStatus ("Result " + selectedResult + " out of "+ results.getAsJsonArray().size() + " results for "+searchString+" with file duration: "+ duration.toString() + " start offset:" + shortestDuration) ;
-
-		// background audio runnable
-		AudioStreamer _audioStreamer = new AudioStreamer(this, _url, shortestDuration, priority,searchString, id);
-		println("Threads:" + Thread.activeCount());
-
-        _audioStreamer.start();
-		previousDuration = duration.getAsFloat();
+			if (! _url.isEmpty()) {
+				searchResults.pollFirst();
+				new AudioStreamer(this, _url, offset, priority, searchString, id);
+			}
+		}
 	}
 
-	private void freeSoundTextSearchThenPlay(String token, float maxDuration) {
+/*
+	private void freeSoundTextSearchAndPlay(String token, float maxDuration) {
 		try {
-			freeSoundTextSearchThenPlay(token, 0.1f, maxDuration, 1, millis());
+			//freeSoundTextSearchThenPlay(token, 0.1f, maxDuration, 1, millis());
+			searchThreads(token, 0.1f, maxDuration, 1, millis());
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 	}
 
-    private void freeSoundTextSearchThenPlay(String token, float maxDuration, int voicePriority) {
-		try {
-			freeSoundTextSearchThenPlay(token, 0.1f, maxDuration, voicePriority,  millis());
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+
+
+    private void freeSoundTextSearchAndPlay(String token, float maxDuration, int voicePriority) {
+
+			freeSoundTextSearchAndPlay(token, 0.1f, maxDuration, voicePriority,  millis());
 	}
 
-    /**
-     * the following code will retrieve a SoundResponse from a integer unique ID
-     * work in progress for future feature extraction purposes
-     * https://freesound.org/docs/api/resources_apiv2.html#sound-instance
-     *
-     *
-     JsonElement soundIdentifier = results.getAsJsonArray().get(lookup).getAsJsonObject().get("id");
-     SoundInstanceQuery soundInstanceQuery = new SoundInstanceQuery(soundIdentifier.getAsInt());
-
-     Response<Sound> soundResponse = null;
-     try {
-     soundResponse = freesoundClient.executeQuery(soundInstanceQuery);
-     } catch (FreesoundClientException e) {
-     e.printStackTrace();
-     }
-
-     JsonElement soundResults = new Gson().toJsonTree(soundResponse.getResults());
-     **/
-
-    String removeFirstAndLast(String s) {
-        String s1 = "";
-        if (s.length() >2) {
-            s1 = s.substring(1, s.length() - 1);
-        }
-        return s1;
-    }
-
+*/
 	private void displayGeneratedTextLayout(String title, String[] body, int lineHeight) {
 
 		offscreenBuffer = createGraphics(width, height);
@@ -419,21 +366,21 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 		layout = offscreenBuffer.get();
 	}
 
-    private void sonifyGeneratedText () throws InterruptedException {
+    private void sonifyGeneratedText () {
 
 		wordsToSonify = grammar.currentExpansionReduced;
 
-         if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
-		setTitleBar("Loading audio...");
-         setConsoleStatus("Loading audio streams...");
-		//15 voices max?
+		if (wordsToSonify==null) { println("No reduced words to sonify"); return;}
+
+		streaming = true;
 
 		for (int i = 0; i < wordsToSonify.length; i++)
 		{
 			if (i > 0)
-				{freeSoundTextSearchThenPlay(wordsToSonify[i], i * 3, 45, i % 15, i);}
-			else // make first select potentially play for longer duration and start straightaway
-				{freeSoundTextSearchThenPlay(wordsToSonify[i], 0.5f, 45, 1, i);}
+				{ freeSoundTextSearchAndPlay(wordsToSonify[i], i * 3, 10, i % 15, i); }
+			else
+				// make first select potentially play for longer duration and start straightaway
+				{ freeSoundTextSearchAndPlay(wordsToSonify[i], 0.5f, 25, 1, i); }
 		}
 
     }
@@ -441,7 +388,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 	private void drawDecorativeBackground(int backgroundGrey, int numberOfLines) {
 
-    	pushMatrix();
+
 			background(backgroundGrey,10);
 			noiseDetail(8, 0.8f);
 			float drift = frameCount * (0.0001f * generationCounter);
@@ -456,8 +403,12 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 					line(-50, (drift + noise(i * 0.45f) * (height * map(i, 1, numberOfLines, 0.2f, 1))) - 200,
 							width + 50, (noise(i * 0.551f) * (height * map(i, 1, numberOfLines, 0.2f, 1))) - 200);
 				}
-			if (isPlaying) {rotate(drift * 10);}
-		popMatrix();
+			if (streaming) {
+				pushMatrix();
+				rotate(drift * 10);
+				popMatrix();
+			}
+
 		}
 	}
 
@@ -545,12 +496,8 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 		}
 
 		if (key=='p' || key=='P') {
-
-			try {
-				sonifyGeneratedText();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+			streaming = !streaming;
+			sonifyGeneratedText();
 		}
 	}
 
@@ -596,10 +543,16 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 		return true;
 	}
 
+	String removeFirstAndLast(String s) {
+		String s1 = "";
+		if (s.length() >2) {
+			s1 = s.substring(1, s.length() - 1);
+		}
+		return s1;
+	}
 
 	public void setTitleBar(String s) {
 	    surface.setTitle(s);
-	    setConsoleStatus(s);
 	}
 
 	public void displayReduced() {
@@ -619,14 +572,15 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 	public void playbackStart(String url, String token) {
 		if (!token.isEmpty()) {
-			setTitleBar("Sonifying \"" + token + "\"");
+			setTitleBar("Playing sound for \"" + token + "\"");
 		}
 	}
 
 	public void console() {
 		_fonts.setTINY();
 		fill(128);
-		text(consoleStatus, width/3, height-100);
+
+		text(consoleStatus, width/6, height-150, width - (width / 6), height - 25 );
 	}
 
 	@Override
@@ -637,15 +591,26 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 	public void playbackStatus(String threadStatus) {
 		if (wordsToSonify != null) {
 
-		if ((wordsToSonify[wordsToSonify.length-1] + " stopped").equals(threadStatus)) {
-			isPlaying = false;
+		if (((wordsToSonify[wordsToSonify.length-1] + " stopped").equals(threadStatus)) && searchResults.peekFirst() == null ) {
+
+			streaming = false;
 			setTitleBar(latestTitle+" was sonified!");
 			setConsoleStatus(latestTitle+" was sonified!");
-			} else {isPlaying = true;}
+			}
 		}
 	}
 
-
+	@Override
+	public void taskComplete(Thread t, int id) {
+		println("thread "+t+" with id " +id+ " ...task complete");
+		//searchThreads[id] = null;
+		try
+		{
+			t.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
 /// Java main
 
 	public static void main(String[] args) {

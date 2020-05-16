@@ -10,10 +10,7 @@ import javafx.scene.media.AudioClip;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import static processing.core.PApplet.map;
 import static processing.core.PApplet.println;
-
-
 
 
 public class AudioStreamer extends Thread {
@@ -32,7 +29,6 @@ public class AudioStreamer extends Thread {
     //Timed Event
     private TimerTask _callback;
     private Timer _timer;
-
 
     public AudioStreamer(IStreamNotify main, String url, float offset) {
 
@@ -53,7 +49,6 @@ public class AudioStreamer extends Thread {
         _id = Thread.activeCount() + 1;
         _timer = new Timer();
         _timer.schedule(_callback, (long) (offset + 0.5) * 500); //compensate for buffering by halving requested delay
-        //  _timer.schedule(_callback, (long) (offset+0.5) );
     }
 
     public AudioStreamer(IStreamNotify main, String url, float offset, int priority) {
@@ -79,12 +74,12 @@ public class AudioStreamer extends Thread {
     }
 
 
-    private void play() {
+    public Thread play() {
 
-        println("Starting audio for \'" + _token + "\' from " + _url + " in thread " + _id);
-
+        println("Streaming audio for \'" + _token + "\' from " + _url + " in thread " + _id);
+        streamNotify.setConsoleStatus("Streaming audio for \'" + _token + "\' from " + _url);
         streamNotify.playbackStart(_url, _token);
-        streamNotify.setConsoleStatus("Starting audio for \'" + _token + "\' from " + _url + " in thread " + _id);
+
 
         // can only change rate if playing from disk
         if (_url.contains("file:")) {
@@ -93,15 +88,16 @@ public class AudioStreamer extends Thread {
             _soundClip.play(_volume, 0, 1, 0.5, _priority);
         }
 
-        if (_soundClip.isPlaying()) {
-            streamNotify.playbackStatus(_token + " playing");
-            streamNotify.setConsoleStatus(_token + " playing");
-        } else {
-            streamNotify.playbackStatus(_token + " stopped");
-            streamNotify.setConsoleStatus(_token + " stopped");
-        }
 
+        while ( _soundClip.isPlaying()) {
+            streamNotify.playbackStatus(_token + " playing");
+        }
+            streamNotify.playbackStatus(_token + " stopped");
+        return this;
     }
+
 }
+
+
 
 
