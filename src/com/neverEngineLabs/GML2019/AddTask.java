@@ -10,7 +10,6 @@ import com.sonoport.freesound.query.search.TextSearch;
 import com.sonoport.freesound.response.Response;
 import rita.RiTa;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -49,11 +48,11 @@ public void run() {
 
                 // store search results
         println( "Running: "+Thread.currentThread().getName());
-        freeSoundTextSearchThenPlay( searchNotify, m_searchString, m_offset, m_maxDuration, m_priority, m_id);
+        freeSoundTextSearch( searchNotify, m_searchString, m_offset, m_maxDuration, m_priority, m_id);
 
         }
 
-        public void freeSoundTextSearchThenPlay(ISearchNotify main, String searchString, float offset, float maxDuration, int priority, int id)  {
+        public void freeSoundTextSearch(ISearchNotify main, String searchString, float offset, float maxDuration, int priority, int id)  {
 
                 searchNotify = main;
                 Set<String> fields = new HashSet<>(Arrays.asList("id", "url", "previews", "tags", "duration"));
@@ -91,25 +90,13 @@ public void run() {
                         return;
                 }
 
+                // add the entire JSON payload to the ConcurrentLinkedDeque...
 
                 JsonElement results = new Gson().toJsonTree(response.getResults());
-                //this would get a String out
-                //String results = new Gson().toJson(response.getResults());
-
 
                 m_searchResults.add(results);
                 searchNotify.taskComplete(Thread.currentThread(), m_id);
-                //todo: add durations too or maybe whole JSON if this is working
 
         }
-
-        String removeFirstAndLast(String s) {
-                String s1 = "";
-                if (s.length() >2) {
-                        s1 = s.substring(1, s.length() - 1);
-                }
-                return s1;
-        }
-
 
 }

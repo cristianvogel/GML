@@ -170,17 +170,20 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 
 	public void draw() {
 
-		//todo: improve UI Classes and Methods
-
-		drawDecorativeBackground( 15, 10* ((searchResults.isEmpty()) ? 10 : searchResults.size() + 10));
-		image(layout,0,0);
-		console();
-
 		//audio streaming
 		if (streaming)
 		{
 			sonifyGeneratedText();
+			pushMatrix();
+			drawDecorativeBackground( 15, 10* ((searchResults.isEmpty()) ? 10 : searchResults.size() + 10));
+			rotate( radians(frameCount%360) );
+			popMatrix();
+		} else {
+			drawDecorativeBackground( 15, 10);
 		}
+
+		image(layout,0,0);
+		console();
 
 		if (generationCounter<1) {
 
@@ -302,7 +305,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 /*
 	private void freeSoundTextSearchAndPlay(String token, float maxDuration) {
 		try {
-			//freeSoundTextSearchThenPlay(token, 0.1f, maxDuration, 1, millis());
+			//freeSoundTextSearch(token, 0.1f, maxDuration, 1, millis());
 			searchThreads(token, 0.1f, maxDuration, 1, millis());
 		} catch (InterruptedException e) {
 			e.printStackTrace();
@@ -591,6 +594,7 @@ public class WordSound_RealNewsFakeNews extends PApplet implements IStreamNotify
 	public void playbackStatus(String threadStatus) {
 		if (wordsToSonify != null) {
 
+			// check if its the last word that was playing
 		if (((wordsToSonify[wordsToSonify.length-1] + " stopped").equals(threadStatus)) && searchResults.peekFirst() == null ) {
 
 			streaming = false;
